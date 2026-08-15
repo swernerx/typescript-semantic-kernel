@@ -37,6 +37,8 @@ func TestRunWritesSemanticFacts(t *testing.T) {
 	assert.Assert(t, strings.Contains(lines[0], `"record":"header"`))
 	assert.Assert(t, strings.Contains(lines[len(lines)-1], `"record":"fact"`))
 	assert.Assert(t, strings.Contains(lines[len(lines)-1], `"typeAtLocation":"type:`))
+	assert.Assert(t, strings.Contains(lines[len(lines)-1], `"actualType":"type:`))
+	assert.Assert(t, strings.Contains(lines[len(lines)-1], `"typeViewStates":{`))
 	assert.Assert(t, strings.Contains(lines[len(lines)-1], `"inferredType":"type:`))
 	assert.Assert(t, !strings.Contains(lines[len(lines)-1], `"annotationType"`))
 	assert.Assert(t, !strings.Contains(lines[len(lines)-1], `"narrowedType"`))

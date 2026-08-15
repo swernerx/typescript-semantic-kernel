@@ -27,6 +27,8 @@ Schema v1 currently guarantees:
 - deterministic record ordering for an identical request and source tree;
 - explicit complete, recovered, and truncated state;
 - stable per-response type IDs that never reuse compiler-internal numeric IDs.
+- an explicit actual type plus contextual, widened, apparent, and declared
+  roots whose absence is explained by machine-readable view states;
 - mutually exclusive annotation and inferred origin views for symbol-backed
   value occurrences, plus explicit control-flow-narrowed views relative to
   unflowed checker types for the selected symbol and property receiver;

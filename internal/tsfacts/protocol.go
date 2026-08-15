@@ -4,6 +4,11 @@ const (
 	SchemaVersion    = 1
 	OffsetEncoding   = "utf8-bytes"
 	UpstreamRevision = "1bcfa18d79a3be41772223d5c05dfe4480e614ff"
+
+	TypeViewAvailable    = "available"
+	TypeViewSameAsActual = "same-as-actual"
+	TypeViewInapplicable = "inapplicable"
+	TypeViewUnavailable  = "unavailable"
 )
 
 type Request struct {
@@ -86,18 +91,30 @@ type SymbolRecord struct {
 	Truncated     bool            `json:"truncated"`
 }
 
+type TypeViewStates struct {
+	Actual     string `json:"actual"`
+	Contextual string `json:"contextual"`
+	Widened    string `json:"widened"`
+	Apparent   string `json:"apparent"`
+	Declared   string `json:"declared"`
+}
+
 type FactRecord struct {
 	Record         string          `json:"record"`
 	File           string          `json:"file"`
 	Span           Span            `json:"span"`
 	SyntaxKind     string          `json:"syntaxKind"`
+	ActualType     TypeID          `json:"actualType"`
 	TypeAtLocation TypeID          `json:"typeAtLocation"`
 	AnnotationType TypeID          `json:"annotationType,omitzero"`
 	InferredType   TypeID          `json:"inferredType,omitzero"`
 	ContextualType TypeID          `json:"contextualType,omitzero"`
 	WidenedType    TypeID          `json:"widenedType,omitzero"`
+	ApparentType   TypeID          `json:"apparentType,omitzero"`
+	DeclaredType   TypeID          `json:"declaredType,omitzero"`
 	NarrowedType   TypeID          `json:"narrowedType,omitzero"`
 	ConstraintType TypeID          `json:"constraintType,omitzero"`
+	TypeViewStates TypeViewStates  `json:"typeViewStates"`
 	Symbol         SymbolID        `json:"symbol,omitzero"`
 	Declarations   []DeclarationID `json:"declarations,omitzero"`
 	Complete       bool            `json:"complete"`
