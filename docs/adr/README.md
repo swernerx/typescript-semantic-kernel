@@ -12,3 +12,4 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0002](0002-use-response-local-symbol-and-declaration-ids.md) | Accepted | Use response-local symbol and declaration IDs |
 | [0003](0003-classify-symbol-backed-type-view-provenance.md) | Accepted | Classify symbol-backed type-view provenance |
 | [0004](0004-make-optional-type-view-availability-explicit.md) | Accepted | Make optional type-view availability explicit |
+| [0005](0005-use-response-local-referential-graph-tables.md) | Accepted | Use response-local referential graph tables |

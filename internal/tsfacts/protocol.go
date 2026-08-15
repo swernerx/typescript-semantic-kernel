@@ -33,6 +33,7 @@ type (
 	TypeID        string
 	SymbolID      string
 	DeclarationID string
+	SignatureID   string
 )
 
 type HeaderRecord struct {
@@ -60,16 +61,24 @@ type LiteralValue struct {
 }
 
 type TypeRecord struct {
-	Record     string        `json:"record"`
-	ID         TypeID        `json:"id"`
-	TypeKind   string        `json:"typeKind"`
-	Display    string        `json:"display"`
-	Flags      []string      `json:"flags"`
-	Members    []TypeID      `json:"members,omitzero"`
-	Constraint TypeID        `json:"constraint,omitzero"`
-	Literal    *LiteralValue `json:"literal,omitzero"`
-	Complete   bool          `json:"complete"`
-	Truncated  bool          `json:"truncated"`
+	Record              string        `json:"record"`
+	ID                  TypeID        `json:"id"`
+	TypeKind            string        `json:"typeKind"`
+	Display             string        `json:"display"`
+	Flags               []string      `json:"flags"`
+	Members             []TypeID      `json:"members,omitzero"`
+	Symbol              SymbolID      `json:"symbol,omitzero"`
+	Target              TypeID        `json:"target,omitzero"`
+	TypeArguments       []TypeID      `json:"typeArguments,omitzero"`
+	Constraint          TypeID        `json:"constraint,omitzero"`
+	Default             TypeID        `json:"default,omitzero"`
+	Properties          []SymbolID    `json:"properties,omitzero"`
+	CallSignatures      []SignatureID `json:"callSignatures,omitzero"`
+	ConstructSignatures []SignatureID `json:"constructSignatures,omitzero"`
+	IndexSignatures     []SignatureID `json:"indexSignatures,omitzero"`
+	Literal             *LiteralValue `json:"literal,omitzero"`
+	Complete            bool          `json:"complete"`
+	Truncated           bool          `json:"truncated"`
 }
 
 type DeclarationRecord struct {
@@ -87,8 +96,24 @@ type SymbolRecord struct {
 	Roles         []string        `json:"roles"`
 	Declarations  []DeclarationID `json:"declarations,omitzero"`
 	AliasedSymbol SymbolID        `json:"aliasedSymbol,omitzero"`
+	Type          TypeID          `json:"type,omitzero"`
+	DeclaredType  TypeID          `json:"declaredType,omitzero"`
+	Members       []SymbolID      `json:"members,omitzero"`
 	Complete      bool            `json:"complete"`
 	Truncated     bool            `json:"truncated"`
+}
+
+type SignatureRecord struct {
+	Record         string        `json:"record"`
+	ID             SignatureID   `json:"id"`
+	SignatureKind  string        `json:"signatureKind"`
+	Declaration    DeclarationID `json:"declaration,omitzero"`
+	TypeParameters []TypeID      `json:"typeParameters,omitzero"`
+	ThisType       TypeID        `json:"thisType,omitzero"`
+	Parameters     []SymbolID    `json:"parameters,omitzero"`
+	ReturnType     TypeID        `json:"returnType"`
+	Complete       bool          `json:"complete"`
+	Truncated      bool          `json:"truncated"`
 }
 
 type TypeViewStates struct {
@@ -128,5 +153,6 @@ type Result struct {
 	Types        []TypeRecord
 	Declarations []DeclarationRecord
 	Symbols      []SymbolRecord
+	Signatures   []SignatureRecord
 	Facts        []FactRecord
 }

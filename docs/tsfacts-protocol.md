@@ -18,7 +18,8 @@ inside one source token in the current spike. The response contains, in order:
 3. interned `type` records in deterministic discovery order;
 4. interned `declaration` records;
 5. interned `symbol` records, including alias-target edges;
-6. one `fact` record per requested selection.
+6. interned `signature` records;
+7. one `fact` record per requested selection.
 
 The first slice exposes the checker's `getTypeAtLocation` result as the required
 `actualType` view. It is the type TypeScript observes at the selected source
@@ -110,6 +111,21 @@ Each fact reports three independent states:
 Per-response IDs such as `type:1`, `symbol:1`, and `declaration:1` are
 deterministic handles only. They are not compiler-internal IDs and must not be
 persisted across requests. See [ADR-0002](adr/0002-use-response-local-symbol-and-declaration-ids.md).
+
+The graph contract additionally reserves response-local `signature:` handles
+and explicit cross-table edges. Types can reference members, symbols, generic
+targets and arguments, constraints, defaults, properties, and call, construct,
+or index signatures. Symbols can reference declarations, aliases, types, and
+members. Signatures reference their declaration, type parameters, `this` type,
+parameter symbols, and return type. The exporter allocates an ID before walking
+edges; forward references, sharing, self-cycles, and mutually recursive cycles
+are therefore valid and record order never implies ownership.
+
+Every response is checked for unique namespaced IDs, resolvable edges, coherent
+completeness, and known type and signature variants before output begins. An
+unknown variant fails explicitly instead of being guessed. The existing
+`opaque` and `truncated` kinds are named schema variants, not unknown fallbacks.
+See [ADR-0005](adr/0005-use-response-local-referential-graph-tables.md).
 
 This spike intentionally omits inference traces, configurable limits,
 diagnostic payloads, project references, daemon reuse, and the OXC bridge. These
