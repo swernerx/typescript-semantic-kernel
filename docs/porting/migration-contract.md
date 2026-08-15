@@ -34,6 +34,8 @@ Schema v1 currently guarantees:
   unflowed checker types for the selected symbol and property receiver;
 - response-local symbol and declaration handles with deterministic declaration
   ordering;
+- response-local type, symbol, declaration, and signature tables whose
+  references preserve sharing and cycles and are validated before emission;
 - explicit alias-to-target edges without collapsing the local alias;
 - logical TypeScript default-library file identities that do not expose host
   installation paths.

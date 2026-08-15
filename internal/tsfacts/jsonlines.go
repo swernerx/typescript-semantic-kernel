@@ -1,7 +1,6 @@
 package tsfacts
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
@@ -9,8 +8,8 @@ import (
 )
 
 func WriteJSONLines(writer io.Writer, result *Result) error {
-	if result == nil {
-		return errors.New("result is required")
+	if err := ValidateResult(result); err != nil {
+		return fmt.Errorf("validate semantic graph: %w", err)
 	}
 	if err := writeJSONLine(writer, result.Header); err != nil {
 		return err
@@ -32,6 +31,11 @@ func WriteJSONLines(writer io.Writer, result *Result) error {
 	}
 	for _, symbol := range result.Symbols {
 		if err := writeJSONLine(writer, symbol); err != nil {
+			return err
+		}
+	}
+	for _, signature := range result.Signatures {
+		if err := writeJSONLine(writer, signature); err != nil {
 			return err
 		}
 	}
