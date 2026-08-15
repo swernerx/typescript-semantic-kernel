@@ -24,7 +24,11 @@ type Span struct {
 	End   int `json:"end"`
 }
 
-type TypeID string
+type (
+	TypeID        string
+	SymbolID      string
+	DeclarationID string
+)
 
 type HeaderRecord struct {
 	Record             string `json:"record"`
@@ -40,7 +44,9 @@ type HeaderRecord struct {
 type FileRecord struct {
 	Record          string `json:"record"`
 	ID              string `json:"id"`
-	DiagnosticCount int    `json:"diagnosticCount"`
+	Origin          string `json:"origin"`
+	Selected        bool   `json:"selected,omitzero"`
+	DiagnosticCount *int   `json:"diagnosticCount,omitzero"`
 }
 
 type LiteralValue struct {
@@ -61,23 +67,46 @@ type TypeRecord struct {
 	Truncated  bool          `json:"truncated"`
 }
 
+type DeclarationRecord struct {
+	Record     string        `json:"record"`
+	ID         DeclarationID `json:"id"`
+	File       string        `json:"file"`
+	Span       Span          `json:"span"`
+	SyntaxKind string        `json:"syntaxKind"`
+}
+
+type SymbolRecord struct {
+	Record        string          `json:"record"`
+	ID            SymbolID        `json:"id"`
+	Name          string          `json:"name"`
+	Roles         []string        `json:"roles"`
+	Declarations  []DeclarationID `json:"declarations,omitzero"`
+	AliasedSymbol SymbolID        `json:"aliasedSymbol,omitzero"`
+	Complete      bool            `json:"complete"`
+	Truncated     bool            `json:"truncated"`
+}
+
 type FactRecord struct {
-	Record         string `json:"record"`
-	File           string `json:"file"`
-	Span           Span   `json:"span"`
-	SyntaxKind     string `json:"syntaxKind"`
-	TypeAtLocation TypeID `json:"typeAtLocation"`
-	ContextualType TypeID `json:"contextualType,omitzero"`
-	WidenedType    TypeID `json:"widenedType,omitzero"`
-	ConstraintType TypeID `json:"constraintType,omitzero"`
-	Complete       bool   `json:"complete"`
-	Recovered      bool   `json:"recovered"`
-	Truncated      bool   `json:"truncated"`
+	Record         string          `json:"record"`
+	File           string          `json:"file"`
+	Span           Span            `json:"span"`
+	SyntaxKind     string          `json:"syntaxKind"`
+	TypeAtLocation TypeID          `json:"typeAtLocation"`
+	ContextualType TypeID          `json:"contextualType,omitzero"`
+	WidenedType    TypeID          `json:"widenedType,omitzero"`
+	ConstraintType TypeID          `json:"constraintType,omitzero"`
+	Symbol         SymbolID        `json:"symbol,omitzero"`
+	Declarations   []DeclarationID `json:"declarations,omitzero"`
+	Complete       bool            `json:"complete"`
+	Recovered      bool            `json:"recovered"`
+	Truncated      bool            `json:"truncated"`
 }
 
 type Result struct {
-	Header HeaderRecord
-	Files  []FileRecord
-	Types  []TypeRecord
-	Facts  []FactRecord
+	Header       HeaderRecord
+	Files        []FileRecord
+	Types        []TypeRecord
+	Declarations []DeclarationRecord
+	Symbols      []SymbolRecord
+	Facts        []FactRecord
 }

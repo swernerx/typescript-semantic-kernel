@@ -6,9 +6,11 @@
 > [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
 
 The first Phase 0 slice is the experimental [`tsfacts`](docs/tsfacts-protocol.md)
-JSON Lines command. Its compatibility boundary and current exclusions are
-tracked in the [migration contract](docs/porting/migration-contract.md), and
-durable implementation choices are recorded in [ADRs](docs/adr/README.md).
+JSON Lines command. It currently exposes selected type views plus response-local
+symbol, alias, and declaration provenance. Its compatibility boundary and
+current exclusions are tracked in the
+[migration contract](docs/porting/migration-contract.md), and durable
+implementation choices are recorded in [ADRs](docs/adr/README.md).
 
 # TypeScript 7
 

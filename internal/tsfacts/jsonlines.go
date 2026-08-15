@@ -25,6 +25,16 @@ func WriteJSONLines(writer io.Writer, result *Result) error {
 			return err
 		}
 	}
+	for _, declaration := range result.Declarations {
+		if err := writeJSONLine(writer, declaration); err != nil {
+			return err
+		}
+	}
+	for _, symbol := range result.Symbols {
+		if err := writeJSONLine(writer, symbol); err != nil {
+			return err
+		}
+	}
 	for _, fact := range result.Facts {
 		if err := writeJSONLine(writer, fact); err != nil {
 			return err

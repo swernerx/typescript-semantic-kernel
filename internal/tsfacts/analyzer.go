@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/microsoft/typescript-go/internal/ast"
@@ -93,32 +92,25 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 	}
 
 	diagnosticCount := 0
+	files := newFileRegistry(program, projectRoot, options.FS)
 	for _, entry := range selected {
 		entry.diagnosticCount = len(program.GetSyntacticDiagnostics(ctx, entry.file)) + len(program.GetSemanticDiagnostics(ctx, entry.file))
 		diagnosticCount += entry.diagnosticCount
+		files.addSelected(entry.file, entry.id, entry.diagnosticCount)
 	}
 
 	c, done := program.GetTypeChecker(ctx)
 	defer done()
-	interner := newTypeInterner(c)
+	types := newTypeInterner(c)
+	symbols := newSymbolInterner(c, files)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
 	for _, resolved := range resolvedSelections {
-		fact, factErr := analyzeSelection(c, interner, resolved.selected, resolved.selection)
+		fact, factErr := analyzeSelection(c, types, symbols, resolved.selected, resolved.selection)
 		if factErr != nil {
 			return nil, factErr
 		}
 		facts = append(facts, fact)
 	}
-
-	files := make([]FileRecord, 0, len(selected))
-	for _, entry := range selected {
-		files = append(files, FileRecord{
-			Record:          "file",
-			ID:              entry.id,
-			DiagnosticCount: entry.diagnosticCount,
-		})
-	}
-	sort.Slice(files, func(left, right int) bool { return files[left].ID < files[right].ID })
 
 	projectID, projectIdentityErr := projectIdentity(projectPath, currentDirectory, options.FS)
 	if projectIdentityErr != nil {
@@ -135,9 +127,11 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			CompilerOptions:    parsed.CompilerOptions(),
 			DiagnosticCount:    diagnosticCount,
 		},
-		Files: files,
-		Types: interner.types,
-		Facts: facts,
+		Files:        files.records(),
+		Types:        types.types,
+		Declarations: symbols.declarations,
+		Symbols:      symbols.symbols,
+		Facts:        facts,
 	}, nil
 }
 
@@ -205,7 +199,7 @@ func projectIdentity(projectPath string, currentDirectory string, fs vfs.FS) (st
 	return tspath.NormalizeSlashes(id), nil
 }
 
-func analyzeSelection(c *checker.Checker, interner *typeInterner, selected *selectedFile, selection Selection) (FactRecord, error) {
+func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolInterner, selected *selectedFile, selection Selection) (FactRecord, error) {
 	textLength := len(selected.file.Text())
 	if selection.End > textLength {
 		return FactRecord{}, fmt.Errorf("selection [%d, %d) exceeds %q length %d", selection.Start, selection.End, selection.File, textLength)
@@ -228,26 +222,29 @@ func analyzeSelection(c *checker.Checker, interner *typeInterner, selected *sele
 		File:           selected.id,
 		Span:           Span{Start: start, End: node.End()},
 		SyntaxKind:     node.Kind.String(),
-		TypeAtLocation: interner.intern(narrowed),
+		TypeAtLocation: types.intern(narrowed),
 		Recovered:      selected.diagnosticCount != 0,
 	}
+	fact.Symbol = symbols.intern(c.GetSymbolAtLocation(node))
+	fact.Declarations = symbols.declarationsOf(fact.Symbol)
 	if ast.IsExpression(node) {
 		contextual := c.GetContextualType(node, checker.ContextFlagsNone)
 		if contextual != nil && contextual != narrowed {
-			fact.ContextualType = interner.intern(contextual)
+			fact.ContextualType = types.intern(contextual)
 		}
 	}
 	if widened := c.GetWidenedType(narrowed); widened != nil && widened != narrowed {
-		fact.WidenedType = interner.intern(widened)
+		fact.WidenedType = types.intern(widened)
 	}
 	if constraint := c.GetBaseConstraintOfType(narrowed); constraint != nil && constraint != narrowed {
-		fact.ConstraintType = interner.intern(constraint)
+		fact.ConstraintType = types.intern(constraint)
 	}
 
-	fact.Truncated = !interner.complete(fact.TypeAtLocation) ||
-		!interner.complete(fact.ContextualType) ||
-		!interner.complete(fact.WidenedType) ||
-		!interner.complete(fact.ConstraintType)
+	fact.Truncated = !types.complete(fact.TypeAtLocation) ||
+		!types.complete(fact.ContextualType) ||
+		!types.complete(fact.WidenedType) ||
+		!types.complete(fact.ConstraintType) ||
+		!symbols.complete(fact.Symbol)
 	fact.Complete = !fact.Recovered && !fact.Truncated
 	return fact, nil
 }
