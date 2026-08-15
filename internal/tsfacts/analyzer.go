@@ -213,8 +213,8 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q must fit inside one token", selection.Start, selection.End, selection.File)
 	}
 
-	narrowed := c.GetTypeAtLocation(node)
-	if narrowed == nil {
+	observed := c.GetTypeAtLocation(node)
+	if observed == nil {
 		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q has no semantic type", selection.Start, selection.End, selection.File)
 	}
 	fact := FactRecord{
@@ -222,27 +222,35 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		File:           selected.id,
 		Span:           Span{Start: start, End: node.End()},
 		SyntaxKind:     node.Kind.String(),
-		TypeAtLocation: types.intern(narrowed),
+		TypeAtLocation: types.intern(observed),
 		Recovered:      selected.diagnosticCount != 0,
 	}
-	fact.Symbol = symbols.intern(c.GetSymbolAtLocation(node))
+	symbol := c.GetSymbolAtLocation(node)
+	fact.Symbol = symbols.intern(symbol)
 	fact.Declarations = symbols.declarationsOf(fact.Symbol)
+	views := classifyTypeViews(c, node, symbol, observed)
+	fact.AnnotationType = types.intern(views.annotation)
+	fact.InferredType = types.intern(views.inferred)
+	fact.NarrowedType = types.intern(views.narrowed)
 	if ast.IsExpression(node) {
 		contextual := c.GetContextualType(node, checker.ContextFlagsNone)
-		if contextual != nil && contextual != narrowed {
+		if contextual != nil && contextual != observed {
 			fact.ContextualType = types.intern(contextual)
 		}
 	}
-	if widened := c.GetWidenedType(narrowed); widened != nil && widened != narrowed {
+	if widened := c.GetWidenedType(observed); widened != nil && widened != observed {
 		fact.WidenedType = types.intern(widened)
 	}
-	if constraint := c.GetBaseConstraintOfType(narrowed); constraint != nil && constraint != narrowed {
+	if constraint := c.GetBaseConstraintOfType(observed); constraint != nil && constraint != observed {
 		fact.ConstraintType = types.intern(constraint)
 	}
 
 	fact.Truncated = !types.complete(fact.TypeAtLocation) ||
+		!types.complete(fact.AnnotationType) ||
+		!types.complete(fact.InferredType) ||
 		!types.complete(fact.ContextualType) ||
 		!types.complete(fact.WidenedType) ||
+		!types.complete(fact.NarrowedType) ||
 		!types.complete(fact.ConstraintType) ||
 		!symbols.complete(fact.Symbol)
 	fact.Complete = !fact.Recovered && !fact.Truncated

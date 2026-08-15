@@ -20,14 +20,38 @@ inside one source token in the current spike. The response contains, in order:
 5. interned `symbol` records, including alias-target edges;
 6. one `fact` record per requested selection.
 
-The first slice exposes the checker's `getTypeAtLocation` result as
-`typeAtLocation`. This view reflects control-flow narrowing where TypeScript
-applies it without mislabelling every ordinary occurrence as narrowed. When
-distinct and available the command also emits contextual, widened, and
-constraint views. Primitive, literal, union, intersection, type parameter,
-object, and callable categories have explicit wire kinds. Object details and
-type categories not yet represented structurally are marked truncated and
-retain display text only as diagnostic metadata.
+The first slice exposes the checker's `getTypeAtLocation` result as the required
+`typeAtLocation` view. It is the type TypeScript observes at the selected source
+occurrence and remains the compatibility field for consumers that need only one
+answer.
+
+For a value occurrence backed by a symbol, schema v1 additionally classifies
+the origin and flow state:
+
+- `annotationType` is the type written on an unambiguous variable, parameter,
+  property declaration, or property signature. It represents the source type
+  node, so an optional `value?: string` has annotation type `string` even though
+  its declared checker type includes `undefined`.
+- `inferredType` is the unflowed symbol type when no supported direct annotation
+  supplies the symbol's whole type. `annotationType` and `inferredType` are
+  mutually exclusive.
+- `narrowedType` is present only when `typeAtLocation` differs from the unflowed
+  symbol type or a property is reached through a flow-narrowed receiver. Its ID
+  is therefore also the `typeAtLocation` ID; the additional field names the
+  control-flow provenance of that observation.
+
+Containing annotations are not promoted to the selected symbol. In particular,
+an annotation on a destructuring pattern describes the pattern input, and a
+function return annotation describes the return type rather than the callable
+symbol. Type-only occurrences do not receive value-origin or narrowing views.
+See [ADR-0003](adr/0003-classify-symbol-backed-type-view-provenance.md).
+
+When distinct and available the command also emits contextual, widened, and
+constraint views. Those expression-specific views are independent of the
+annotation/inference classification. Primitive, literal, union, intersection,
+type parameter, object, and callable categories have explicit wire kinds.
+Object details and type categories not yet represented structurally are marked
+truncated and retain display text only as diagnostic metadata.
 
 When TypeScript exposes a symbol at the selected token, the fact contains a
 response-local `symbol` handle and its direct declaration handles. Symbol
@@ -68,7 +92,6 @@ Per-response IDs such as `type:1`, `symbol:1`, and `declaration:1` are
 deterministic handles only. They are not compiler-internal IDs and must not be
 persisted across requests. See [ADR-0002](adr/0002-use-response-local-symbol-and-declaration-ids.md).
 
-This spike intentionally omits annotation and inference views, configurable
-limits, diagnostic payloads, project references, daemon reuse, and the OXC
-bridge. These remain explicit Phase 0 work rather than undocumented protocol
-behavior.
+This spike intentionally omits inference traces, configurable limits,
+diagnostic payloads, project references, daemon reuse, and the OXC bridge. These
+remain explicit Phase 0 work rather than undocumented protocol behavior.

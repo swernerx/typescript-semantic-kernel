@@ -1,13 +1,14 @@
 > [!IMPORTANT]
-> This is a private experimental derivative of
+> This is an experimental open-source derivative of
 > [`microsoft/typescript-go`](https://github.com/microsoft/typescript-go), not
 > an official Microsoft or TypeScript project. The experiment explores a small,
 > stable interface for attaching TypeScript semantic facts to source code. See
 > [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
 
 The first Phase 0 slice is the experimental [`tsfacts`](docs/tsfacts-protocol.md)
-JSON Lines command. It currently exposes selected type views plus response-local
-symbol, alias, and declaration provenance. Its compatibility boundary and
+JSON Lines command. It currently exposes annotation, inference, contextual,
+widening, narrowing, and constraint views plus response-local symbol, alias,
+and declaration provenance. Its compatibility boundary and
 current exclusions are tracked in the
 [migration contract](docs/porting/migration-contract.md), and durable
 implementation choices are recorded in [ADRs](docs/adr/README.md).

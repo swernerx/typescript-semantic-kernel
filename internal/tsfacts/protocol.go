@@ -92,8 +92,11 @@ type FactRecord struct {
 	Span           Span            `json:"span"`
 	SyntaxKind     string          `json:"syntaxKind"`
 	TypeAtLocation TypeID          `json:"typeAtLocation"`
+	AnnotationType TypeID          `json:"annotationType,omitzero"`
+	InferredType   TypeID          `json:"inferredType,omitzero"`
 	ContextualType TypeID          `json:"contextualType,omitzero"`
 	WidenedType    TypeID          `json:"widenedType,omitzero"`
+	NarrowedType   TypeID          `json:"narrowedType,omitzero"`
 	ConstraintType TypeID          `json:"constraintType,omitzero"`
 	Symbol         SymbolID        `json:"symbol,omitzero"`
 	Declarations   []DeclarationID `json:"declarations,omitzero"`
