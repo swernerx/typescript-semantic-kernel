@@ -6,22 +6,23 @@ import (
 	"github.com/microsoft/typescript-go/internal/checker"
 )
 
-const (
-	maxTypeDepth = 32
-	maxTypeNodes = 4096
-)
-
 type typeInterner struct {
-	checker *checker.Checker
-	byType  map[*checker.Type]TypeID
-	types   []TypeRecord
-	limitID TypeID
+	checker          *checker.Checker
+	limits           BudgetLimits
+	byType           map[*checker.Type]TypeID
+	types            []TypeRecord
+	limitIDs         map[string]TypeID
+	typeNodesUsed    int
+	maxDepthObserved int
+	budgetTruncated  bool
 }
 
-func newTypeInterner(c *checker.Checker) *typeInterner {
+func newTypeInterner(c *checker.Checker, limits BudgetLimits) *typeInterner {
 	return &typeInterner{
-		checker: c,
-		byType:  make(map[*checker.Type]TypeID),
+		checker:  c,
+		limits:   limits,
+		byType:   make(map[*checker.Type]TypeID),
+		limitIDs: make(map[string]TypeID),
 	}
 }
 
@@ -36,13 +37,20 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 	if id, ok := i.byType[t]; ok {
 		return id
 	}
-	if depth > maxTypeDepth || len(i.types) >= maxTypeNodes {
-		return i.internLimit()
+	if depth > i.maxDepthObserved {
+		i.maxDepthObserved = depth
+	}
+	if depth > i.limits.MaxTypeDepth {
+		return i.internLimit(GraphIssueMaxTypeDepth, i.limits.MaxTypeDepth)
+	}
+	if i.typeNodesUsed >= i.limits.MaxTypeNodes {
+		return i.internLimit(GraphIssueMaxTypeNodes, i.limits.MaxTypeNodes)
 	}
 
 	id := TypeID(fmt.Sprintf("type:%d", len(i.types)+1))
 	i.byType[t] = id
 	i.types = append(i.types, TypeRecord{Record: "type", ID: id})
+	i.typeNodesUsed++
 	index := len(i.types) - 1
 
 	record := TypeRecord{
@@ -50,14 +58,14 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 		ID:       id,
 		Display:  i.checker.TypeToString(t),
 		Flags:    checker.FormatTypeFlags(t.Flags()),
+		State:    EntityStateComplete,
 		Complete: true,
 	}
 	flags := t.Flags()
 
 	if flags&checker.TypeFlagsIntrinsic != 0 && t.AsIntrinsicType().IntrinsicName() == "error" {
 		record.TypeKind = "error"
-		record.Complete = false
-		record.Truncated = true
+		markTypeIncomplete(&record, EntityStateError, GraphIssue{Code: GraphIssueCheckerError})
 	} else {
 		switch {
 		case flags&checker.TypeFlagsAny != 0:
@@ -88,29 +96,33 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 		case flags&checker.TypeFlagsUnion != 0:
 			record.TypeKind = "union"
 			record.Members, record.Complete = i.internMembers(t.Types(), depth+1)
-			record.Truncated = !record.Complete
+			if !record.Complete {
+				markTypeIncomplete(&record, EntityStateTruncated, GraphIssue{Code: GraphIssueReferencedIncompleteType})
+			}
 		case flags&checker.TypeFlagsIntersection != 0:
 			record.TypeKind = "intersection"
 			record.Members, record.Complete = i.internMembers(t.Types(), depth+1)
-			record.Truncated = !record.Complete
+			if !record.Complete {
+				markTypeIncomplete(&record, EntityStateTruncated, GraphIssue{Code: GraphIssueReferencedIncompleteType})
+			}
 		case flags&checker.TypeFlagsTypeParameter != 0:
 			record.TypeKind = "type_parameter"
 			if constraint := i.checker.GetBaseConstraintOfType(t); constraint != nil {
 				record.Constraint = i.internAtDepth(constraint, depth+1)
 				record.Complete = i.complete(record.Constraint)
-				record.Truncated = !record.Complete
+				if !record.Complete {
+					markTypeIncomplete(&record, EntityStateTruncated, GraphIssue{Code: GraphIssueReferencedIncompleteType})
+				}
 			}
 		case flags&checker.TypeFlagsObject != 0:
 			record.TypeKind = "object"
 			if structured := t.AsStructuredType(); structured != nil && len(structured.CallSignatures()) != 0 {
 				record.TypeKind = "callable"
 			}
-			record.Complete = false
-			record.Truncated = true
+			markTypeIncomplete(&record, EntityStateTruncated, GraphIssue{Code: GraphIssueUnsupportedStructure})
 		default:
 			record.TypeKind = "opaque"
-			record.Complete = false
-			record.Truncated = true
+			markTypeIncomplete(&record, EntityStateUnsupported, GraphIssue{Code: GraphIssueUnsupportedTypeForm})
 		}
 	}
 
@@ -129,20 +141,24 @@ func (i *typeInterner) internMembers(types []*checker.Type, depth int) ([]TypeID
 	return members, complete
 }
 
-func (i *typeInterner) internLimit() TypeID {
-	if i.limitID != "" {
-		return i.limitID
+func (i *typeInterner) internLimit(code string, limit int) TypeID {
+	if id := i.limitIDs[code]; id != "" {
+		return id
 	}
-	i.limitID = TypeID(fmt.Sprintf("type:%d", len(i.types)+1))
+	id := TypeID(fmt.Sprintf("type:%d", len(i.types)+1))
+	i.limitIDs[code] = id
+	i.budgetTruncated = true
 	i.types = append(i.types, TypeRecord{
 		Record:    "type",
-		ID:        i.limitID,
+		ID:        id,
 		TypeKind:  "truncated",
-		Display:   "<serialization limit>",
+		Display:   "<" + code + ">",
 		Flags:     []string{"None"},
+		State:     EntityStateTruncated,
+		Issues:    []GraphIssue{{Code: code, Limit: limit}},
 		Truncated: true,
 	})
-	return i.limitID
+	return id
 }
 
 func (i *typeInterner) complete(id TypeID) bool {
@@ -155,6 +171,34 @@ func (i *typeInterner) complete(id TypeID) bool {
 		}
 	}
 	return false
+}
+
+func (i *typeInterner) truncated(id TypeID) bool {
+	if id == "" {
+		return false
+	}
+	for index := range i.types {
+		if i.types[index].ID == id {
+			return i.types[index].State == EntityStateTruncated
+		}
+	}
+	return false
+}
+
+func (i *typeInterner) budgetReport() BudgetReport {
+	return BudgetReport{
+		Limits:               i.limits,
+		TypeNodesUsed:        i.typeNodesUsed,
+		MaxTypeDepthObserved: i.maxDepthObserved,
+		Truncated:            i.budgetTruncated,
+	}
+}
+
+func markTypeIncomplete(record *TypeRecord, state string, issue GraphIssue) {
+	record.State = state
+	record.Issues = append(record.Issues, issue)
+	record.Complete = false
+	record.Truncated = state == EntityStateTruncated
 }
 
 func literalValue(t *checker.Type) *LiteralValue {

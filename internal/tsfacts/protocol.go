@@ -9,13 +9,20 @@ const (
 	TypeViewSameAsActual = "same-as-actual"
 	TypeViewInapplicable = "inapplicable"
 	TypeViewUnavailable  = "unavailable"
+
+	EntityStateComplete    = "complete"
+	EntityStateTruncated   = "truncated"
+	EntityStateUnsupported = "unsupported"
+	EntityStateError       = "error"
 )
 
 type Request struct {
-	SchemaVersion int         `json:"schemaVersion"`
-	Project       string      `json:"project"`
-	Files         []string    `json:"files,omitzero"`
-	Selections    []Selection `json:"selections"`
+	SchemaVersion        int          `json:"schemaVersion"`
+	RequiredCapabilities []string     `json:"requiredCapabilities,omitzero"`
+	Budgets              BudgetLimits `json:"budgets,omitzero"`
+	Project              string       `json:"project"`
+	Files                []string     `json:"files,omitzero"`
+	Selections           []Selection  `json:"selections"`
 }
 
 type Selection struct {
@@ -37,14 +44,33 @@ type (
 )
 
 type HeaderRecord struct {
-	Record             string `json:"record"`
-	SchemaVersion      int    `json:"schemaVersion"`
-	TypeScriptVersion  string `json:"typescriptVersion"`
-	TypeScriptRevision string `json:"typescriptRevision"`
-	OffsetEncoding     string `json:"offsetEncoding"`
-	Project            string `json:"project"`
-	CompilerOptions    any    `json:"compilerOptions"`
-	DiagnosticCount    int    `json:"diagnosticCount"`
+	Record             string       `json:"record"`
+	SchemaVersion      int          `json:"schemaVersion"`
+	TypeScriptVersion  string       `json:"typescriptVersion"`
+	TypeScriptRevision string       `json:"typescriptRevision"`
+	OffsetEncoding     string       `json:"offsetEncoding"`
+	Capabilities       []string     `json:"capabilities"`
+	Budgets            BudgetReport `json:"budgets"`
+	Project            string       `json:"project"`
+	CompilerOptions    any          `json:"compilerOptions"`
+	DiagnosticCount    int          `json:"diagnosticCount"`
+}
+
+type BudgetLimits struct {
+	MaxTypeNodes int `json:"maxTypeNodes,omitzero"`
+	MaxTypeDepth int `json:"maxTypeDepth,omitzero"`
+}
+
+type BudgetReport struct {
+	Limits               BudgetLimits `json:"limits"`
+	TypeNodesUsed        int          `json:"typeNodesUsed"`
+	MaxTypeDepthObserved int          `json:"maxTypeDepthObserved"`
+	Truncated            bool         `json:"truncated"`
+}
+
+type GraphIssue struct {
+	Code  string `json:"code"`
+	Limit int    `json:"limit,omitzero"`
 }
 
 type FileRecord struct {
@@ -77,6 +103,8 @@ type TypeRecord struct {
 	ConstructSignatures []SignatureID `json:"constructSignatures,omitzero"`
 	IndexSignatures     []SignatureID `json:"indexSignatures,omitzero"`
 	Literal             *LiteralValue `json:"literal,omitzero"`
+	State               string        `json:"state"`
+	Issues              []GraphIssue  `json:"issues,omitzero"`
 	Complete            bool          `json:"complete"`
 	Truncated           bool          `json:"truncated"`
 }
@@ -99,6 +127,8 @@ type SymbolRecord struct {
 	Type          TypeID          `json:"type,omitzero"`
 	DeclaredType  TypeID          `json:"declaredType,omitzero"`
 	Members       []SymbolID      `json:"members,omitzero"`
+	State         string          `json:"state"`
+	Issues        []GraphIssue    `json:"issues,omitzero"`
 	Complete      bool            `json:"complete"`
 	Truncated     bool            `json:"truncated"`
 }
@@ -112,6 +142,8 @@ type SignatureRecord struct {
 	ThisType       TypeID        `json:"thisType,omitzero"`
 	Parameters     []SymbolID    `json:"parameters,omitzero"`
 	ReturnType     TypeID        `json:"returnType"`
+	State          string        `json:"state"`
+	Issues         []GraphIssue  `json:"issues,omitzero"`
 	Complete       bool          `json:"complete"`
 	Truncated      bool          `json:"truncated"`
 }

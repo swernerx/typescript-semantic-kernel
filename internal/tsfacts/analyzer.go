@@ -32,6 +32,10 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 	if err := validateRequest(request); err != nil {
 		return nil, err
 	}
+	limits, err := normalizeBudgetLimits(request.Budgets)
+	if err != nil {
+		return nil, err
+	}
 	if options.FS == nil {
 		return nil, errors.New("filesystem is required")
 	}
@@ -101,7 +105,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 
 	c, done := program.GetTypeChecker(ctx)
 	defer done()
-	types := newTypeInterner(c)
+	types := newTypeInterner(c, limits)
 	symbols := newSymbolInterner(c, files)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
 	for _, resolved := range resolvedSelections {
@@ -123,6 +127,8 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			TypeScriptVersion:  core.Version(),
 			TypeScriptRevision: UpstreamRevision,
 			OffsetEncoding:     OffsetEncoding,
+			Capabilities:       SupportedCapabilities(),
+			Budgets:            types.budgetReport(),
 			Project:            projectID,
 			CompilerOptions:    parsed.CompilerOptions(),
 			DiagnosticCount:    diagnosticCount,
@@ -141,6 +147,12 @@ func validateRequest(request Request) error {
 	}
 	if request.Project == "" {
 		return errors.New("project is required")
+	}
+	if err := validateRequiredCapabilities(request.RequiredCapabilities); err != nil {
+		return err
+	}
+	if _, err := normalizeBudgetLimits(request.Budgets); err != nil {
+		return err
 	}
 	if len(request.Selections) == 0 {
 		return errors.New("at least one selection is required")
@@ -248,17 +260,27 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		fact.ConstraintType = types.intern(constraint)
 	}
 
-	fact.Truncated = !types.complete(fact.TypeAtLocation) ||
-		!types.complete(fact.AnnotationType) ||
-		!types.complete(fact.InferredType) ||
-		!types.complete(fact.ContextualType) ||
-		!types.complete(fact.WidenedType) ||
-		!types.complete(fact.ApparentType) ||
-		!types.complete(fact.DeclaredType) ||
-		!types.complete(fact.NarrowedType) ||
-		!types.complete(fact.ConstraintType) ||
-		!symbols.complete(fact.Symbol)
-	fact.Complete = !fact.Recovered && !fact.Truncated
+	fact.Truncated = types.truncated(fact.TypeAtLocation) ||
+		types.truncated(fact.AnnotationType) ||
+		types.truncated(fact.InferredType) ||
+		types.truncated(fact.ContextualType) ||
+		types.truncated(fact.WidenedType) ||
+		types.truncated(fact.ApparentType) ||
+		types.truncated(fact.DeclaredType) ||
+		types.truncated(fact.NarrowedType) ||
+		types.truncated(fact.ConstraintType) ||
+		symbols.truncated(fact.Symbol)
+	fact.Complete = !fact.Recovered &&
+		types.complete(fact.TypeAtLocation) &&
+		types.complete(fact.AnnotationType) &&
+		types.complete(fact.InferredType) &&
+		types.complete(fact.ContextualType) &&
+		types.complete(fact.WidenedType) &&
+		types.complete(fact.ApparentType) &&
+		types.complete(fact.DeclaredType) &&
+		types.complete(fact.NarrowedType) &&
+		types.complete(fact.ConstraintType) &&
+		symbols.complete(fact.Symbol)
 	return fact, nil
 }
 

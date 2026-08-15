@@ -3,6 +3,7 @@ package tsfacts
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -27,6 +28,22 @@ func ValidateResult(result *Result) error {
 	if result.Header.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("header schemaVersion %d does not match %d", result.Header.SchemaVersion, SchemaVersion)
 	}
+	if err := validateCapabilities(result.Header.Capabilities); err != nil {
+		return err
+	}
+	limits, err := normalizeBudgetLimits(result.Header.Budgets.Limits)
+	if err != nil {
+		return fmt.Errorf("header budgets: %w", err)
+	}
+	if limits != result.Header.Budgets.Limits {
+		return errors.New("header budgets must contain normalized limits")
+	}
+	if result.Header.Budgets.TypeNodesUsed < 0 || result.Header.Budgets.TypeNodesUsed > limits.MaxTypeNodes {
+		return fmt.Errorf("header typeNodesUsed %d exceeds limit %d", result.Header.Budgets.TypeNodesUsed, limits.MaxTypeNodes)
+	}
+	if result.Header.Budgets.MaxTypeDepthObserved < 0 {
+		return errors.New("header maxTypeDepthObserved must not be negative")
+	}
 
 	files := make(map[string]struct{}, len(result.Files))
 	for index, file := range result.Files {
@@ -49,8 +66,8 @@ func ValidateResult(result *Result) error {
 		if _, ok := knownTypeKinds[record.TypeKind]; !ok {
 			return fmt.Errorf("type %q has unknown typeKind %q", record.ID, record.TypeKind)
 		}
-		if record.Complete == record.Truncated {
-			return fmt.Errorf("type %q must be exactly one of complete or truncated", record.ID)
+		if err := validateEntityState("type", string(record.ID), record.State, record.Issues, record.Complete, record.Truncated); err != nil {
+			return err
 		}
 	}
 
@@ -75,8 +92,8 @@ func ValidateResult(result *Result) error {
 		if err := addTypedID(symbols, record.ID, "symbol:", "symbol", index, record); err != nil {
 			return err
 		}
-		if record.Complete == record.Truncated {
-			return fmt.Errorf("symbol %q must be exactly one of complete or truncated", record.ID)
+		if err := validateEntityState("symbol", string(record.ID), record.State, record.Issues, record.Complete, record.Truncated); err != nil {
+			return err
 		}
 	}
 
@@ -94,9 +111,60 @@ func ValidateResult(result *Result) error {
 		if record.ReturnType == "" {
 			return fmt.Errorf("signature %q requires returnType", record.ID)
 		}
-		if record.Complete == record.Truncated {
-			return fmt.Errorf("signature %q must be exactly one of complete or truncated", record.ID)
+		if err := validateEntityState("signature", string(record.ID), record.State, record.Issues, record.Complete, record.Truncated); err != nil {
+			return err
 		}
+	}
+	budgetSentinels := 0
+	budgetIssueIDs := make(map[string]TypeID, 2)
+	for _, record := range result.Types {
+		budgetSentinel := false
+		budgetCode := ""
+		for _, issue := range record.Issues {
+			switch issue.Code {
+			case GraphIssueMaxTypeDepth:
+				if issue.Limit != limits.MaxTypeDepth {
+					return fmt.Errorf("type %q max-type-depth issue has limit %d; expected %d", record.ID, issue.Limit, limits.MaxTypeDepth)
+				}
+				if record.TypeKind != "truncated" {
+					return fmt.Errorf("type %q budget issue requires truncated typeKind", record.ID)
+				}
+				budgetSentinel = true
+				budgetCode = issue.Code
+			case GraphIssueMaxTypeNodes:
+				if issue.Limit != limits.MaxTypeNodes {
+					return fmt.Errorf("type %q max-type-nodes issue has limit %d; expected %d", record.ID, issue.Limit, limits.MaxTypeNodes)
+				}
+				if record.TypeKind != "truncated" {
+					return fmt.Errorf("type %q budget issue requires truncated typeKind", record.ID)
+				}
+				if budgetSentinel {
+					return fmt.Errorf("type %q must not combine budget sentinel issues", record.ID)
+				}
+				budgetSentinel = true
+				budgetCode = issue.Code
+			default:
+				if issue.Limit != 0 {
+					return fmt.Errorf("type %q issue %q must not contain limit", record.ID, issue.Code)
+				}
+			}
+		}
+		if budgetSentinel {
+			if record.State != EntityStateTruncated {
+				return fmt.Errorf("type %q budget sentinel must have truncated state", record.ID)
+			}
+			if previous := budgetIssueIDs[budgetCode]; previous != "" {
+				return fmt.Errorf("types %q and %q duplicate budget sentinel %q", previous, record.ID, budgetCode)
+			}
+			budgetIssueIDs[budgetCode] = record.ID
+			budgetSentinels++
+		}
+	}
+	if result.Header.Budgets.TypeNodesUsed != len(result.Types)-budgetSentinels {
+		return fmt.Errorf("header typeNodesUsed %d does not match %d non-sentinel type nodes", result.Header.Budgets.TypeNodesUsed, len(result.Types)-budgetSentinels)
+	}
+	if result.Header.Budgets.Truncated != (budgetSentinels != 0) {
+		return errors.New("header budget truncation does not match graph sentinels")
 	}
 
 	for _, record := range result.Types {
@@ -178,6 +246,21 @@ func ValidateResult(result *Result) error {
 		if fact.ActualType == "" || fact.ActualType != fact.TypeAtLocation {
 			return fmt.Errorf("%s actualType must equal required typeAtLocation", owner)
 		}
+		if fact.TypeViewStates.Actual != TypeViewAvailable {
+			return fmt.Errorf("%s actual type view must be %q", owner, TypeViewAvailable)
+		}
+		if err := validateOptionalTypeView(owner, "contextual", fact.ContextualType, fact.TypeViewStates.Contextual); err != nil {
+			return err
+		}
+		if err := validateOptionalTypeView(owner, "widened", fact.WidenedType, fact.TypeViewStates.Widened); err != nil {
+			return err
+		}
+		if err := validateOptionalTypeView(owner, "apparent", fact.ApparentType, fact.TypeViewStates.Apparent); err != nil {
+			return err
+		}
+		if err := validateOptionalTypeView(owner, "declared", fact.DeclaredType, fact.TypeViewStates.Declared); err != nil {
+			return err
+		}
 		if err := requireTypes(types, owner, []TypeID{
 			fact.ActualType, fact.AnnotationType, fact.InferredType, fact.ContextualType,
 			fact.WidenedType, fact.ApparentType, fact.DeclaredType, fact.NarrowedType, fact.ConstraintType,
@@ -190,20 +273,104 @@ func ValidateResult(result *Result) error {
 		if err := requireDeclarations(declarations, owner, fact.Declarations); err != nil {
 			return err
 		}
-		if fact.Complete != (!fact.Recovered && !fact.Truncated) {
-			return fmt.Errorf("%s completeness is inconsistent with recovered and truncated", owner)
+		factTypeIDs := []TypeID{
+			fact.ActualType, fact.AnnotationType, fact.InferredType, fact.ContextualType,
+			fact.WidenedType, fact.ApparentType, fact.DeclaredType, fact.NarrowedType, fact.ConstraintType,
+		}
+		referencesTruncated := anyTruncatedType(types, factTypeIDs) || fact.Symbol != "" && symbols[fact.Symbol].Truncated
+		if fact.Truncated != referencesTruncated {
+			return fmt.Errorf("%s truncation does not match referenced graph entities", owner)
+		}
+		referencesComplete := allCompleteTypes(types, factTypeIDs) && (fact.Symbol == "" || symbols[fact.Symbol].Complete)
+		if fact.Complete != (!fact.Recovered && referencesComplete) {
+			return fmt.Errorf("%s completeness does not match recovery and referenced graph entities", owner)
 		}
 		if fact.Complete {
-			if err := requireCompleteTypes(types, owner, []TypeID{
-				fact.ActualType, fact.AnnotationType, fact.InferredType, fact.ContextualType,
-				fact.WidenedType, fact.ApparentType, fact.DeclaredType, fact.NarrowedType, fact.ConstraintType,
-			}); err != nil {
+			if err := requireCompleteTypes(types, owner, factTypeIDs); err != nil {
 				return err
 			}
 			if err := requireCompleteSymbols(symbols, owner, []SymbolID{fact.Symbol}); err != nil {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func validateEntityState(kind string, id string, state string, issues []GraphIssue, complete bool, truncated bool) error {
+	if state != EntityStateComplete && state != EntityStateTruncated && state != EntityStateUnsupported && state != EntityStateError {
+		return fmt.Errorf("%s %q has unknown state %q", kind, id, state)
+	}
+	if complete != (state == EntityStateComplete) {
+		return fmt.Errorf("%s %q complete flag does not match state %q", kind, id, state)
+	}
+	if truncated != (state == EntityStateTruncated) {
+		return fmt.Errorf("%s %q truncated flag does not match state %q", kind, id, state)
+	}
+	if state == EntityStateComplete && len(issues) != 0 {
+		return fmt.Errorf("complete %s %q must not contain issues", kind, id)
+	}
+	if state != EntityStateComplete && len(issues) == 0 {
+		return fmt.Errorf("incomplete %s %q requires a machine-readable issue", kind, id)
+	}
+	for index, issue := range issues {
+		if issue.Code == "" {
+			return fmt.Errorf("%s %q issues[%d] requires code", kind, id, index)
+		}
+		if index != 0 && issues[index-1].Code >= issue.Code {
+			return fmt.Errorf("%s %q issues must be unique and sorted by code", kind, id)
+		}
+	}
+	return nil
+}
+
+func validateCapabilities(capabilities []string) error {
+	if !slices.IsSorted(capabilities) {
+		return errors.New("header capabilities must be sorted")
+	}
+	for index, capability := range capabilities {
+		if capability == "" {
+			return fmt.Errorf("header capabilities[%d] must not be empty", index)
+		}
+		if index != 0 && capabilities[index-1] == capability {
+			return errors.New("header capabilities must be unique")
+		}
+	}
+	for _, required := range supportedCapabilities {
+		if _, present := slices.BinarySearch(capabilities, required); !present {
+			return fmt.Errorf("header capabilities omit schema-v1 capability %q", required)
+		}
+	}
+	return nil
+}
+
+func anyTruncatedType(known map[TypeID]TypeRecord, ids []TypeID) bool {
+	for _, id := range ids {
+		if id != "" && known[id].Truncated {
+			return true
+		}
+	}
+	return false
+}
+
+func allCompleteTypes(known map[TypeID]TypeRecord, ids []TypeID) bool {
+	for _, id := range ids {
+		if id != "" && !known[id].Complete {
+			return false
+		}
+	}
+	return true
+}
+
+func validateOptionalTypeView(owner string, view string, id TypeID, state string) error {
+	if state != TypeViewAvailable && state != TypeViewSameAsActual && state != TypeViewInapplicable && state != TypeViewUnavailable {
+		return fmt.Errorf("%s %s type view has unknown state %q", owner, view, state)
+	}
+	if state == TypeViewAvailable && id == "" {
+		return fmt.Errorf("%s %s type view is available without a root", owner, view)
+	}
+	if state != TypeViewAvailable && id != "" {
+		return fmt.Errorf("%s %s type view state %q must omit its root", owner, view, state)
 	}
 	return nil
 }

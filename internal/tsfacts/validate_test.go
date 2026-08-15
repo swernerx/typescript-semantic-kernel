@@ -52,6 +52,8 @@ func TestValidateResultRejectsDuplicateIdentity(t *testing.T) {
 func TestValidateResultRejectsIncompleteEdgeFromCompleteEntity(t *testing.T) {
 	t.Parallel()
 	result := cyclicGraphResult()
+	result.Types[1].State = tsfacts.EntityStateTruncated
+	result.Types[1].Issues = []tsfacts.GraphIssue{{Code: tsfacts.GraphIssueUnsupportedStructure}}
 	result.Types[1].Complete = false
 	result.Types[1].Truncated = true
 
@@ -59,9 +61,50 @@ func TestValidateResultRejectsIncompleteEdgeFromCompleteEntity(t *testing.T) {
 	assert.ErrorContains(t, err, `complete symbol symbol:1 references truncated type "type:2"`)
 }
 
+func TestValidateResultRejectsUnknownEntityState(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Types[0].State = "future-state"
+	result.Types[0].Complete = false
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `type "type:1" has unknown state "future-state"`)
+}
+
+func TestValidateResultRejectsIncoherentTypeViewState(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Files = []tsfacts.FileRecord{{Record: "file", ID: "src/example.ts", Origin: "project"}}
+	result.Facts = []tsfacts.FactRecord{{
+		Record:         "fact",
+		File:           "src/example.ts",
+		ActualType:     "type:1",
+		TypeAtLocation: "type:1",
+		ContextualType: "type:2",
+		TypeViewStates: tsfacts.TypeViewStates{
+			Actual:     tsfacts.TypeViewAvailable,
+			Contextual: tsfacts.TypeViewUnavailable,
+			Widened:    tsfacts.TypeViewSameAsActual,
+			Apparent:   tsfacts.TypeViewSameAsActual,
+			Declared:   tsfacts.TypeViewInapplicable,
+		},
+	}}
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `contextual type view state "unavailable" must omit its root`)
+}
+
 func cyclicGraphResult() *tsfacts.Result {
 	return &tsfacts.Result{
-		Header: tsfacts.HeaderRecord{Record: "header", SchemaVersion: tsfacts.SchemaVersion},
+		Header: tsfacts.HeaderRecord{
+			Record:        "header",
+			SchemaVersion: tsfacts.SchemaVersion,
+			Capabilities:  tsfacts.SupportedCapabilities(),
+			Budgets: tsfacts.BudgetReport{
+				Limits:        tsfacts.BudgetLimits{MaxTypeNodes: tsfacts.DefaultMaxTypeNodes, MaxTypeDepth: tsfacts.DefaultMaxTypeDepth},
+				TypeNodesUsed: 3,
+			},
+		},
 		Types: []tsfacts.TypeRecord{
 			{
 				Record:     "type",
@@ -70,6 +113,7 @@ func cyclicGraphResult() *tsfacts.Result {
 				Display:    "Node",
 				Flags:      []string{"Object"},
 				Properties: []tsfacts.SymbolID{"symbol:1"},
+				State:      tsfacts.EntityStateComplete,
 				Complete:   true,
 			},
 			{
@@ -79,6 +123,7 @@ func cyclicGraphResult() *tsfacts.Result {
 				Display:        "(next: Node) => Node",
 				Flags:          []string{"Object"},
 				CallSignatures: []tsfacts.SignatureID{"signature:1"},
+				State:          tsfacts.EntityStateComplete,
 				Complete:       true,
 			},
 			{
@@ -89,6 +134,7 @@ func cyclicGraphResult() *tsfacts.Result {
 				Flags:      []string{"TypeParameter"},
 				Constraint: "type:1",
 				Default:    "type:1",
+				State:      tsfacts.EntityStateComplete,
 				Complete:   true,
 			},
 		},
@@ -100,6 +146,7 @@ func cyclicGraphResult() *tsfacts.Result {
 				Roles:    []string{"property"},
 				Type:     "type:2",
 				Members:  []tsfacts.SymbolID{"symbol:1"},
+				State:    tsfacts.EntityStateComplete,
 				Complete: true,
 			},
 		},
@@ -111,6 +158,7 @@ func cyclicGraphResult() *tsfacts.Result {
 				TypeParameters: []tsfacts.TypeID{"type:3"},
 				Parameters:     []tsfacts.SymbolID{"symbol:1"},
 				ReturnType:     "type:1",
+				State:          tsfacts.EntityStateComplete,
 				Complete:       true,
 			},
 		},
