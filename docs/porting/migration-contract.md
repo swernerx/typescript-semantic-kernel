@@ -25,6 +25,8 @@ Schema v1 currently guarantees:
 - normalized project-relative file identities;
 - zero-based, half-open UTF-8 byte spans;
 - deterministic record ordering for an identical request and source tree;
+- deterministic explicit-selection and file-wide occurrence scopes backed by
+  the same semantic snapshot builder;
 - capability negotiation and explicit schema-v1 compatibility behavior;
 - deterministic type-node and traversal-depth budgets with referential cutoff
   sentinels and header accounting;
@@ -41,7 +43,7 @@ Schema v1 currently guarantees:
   references preserve sharing and cycles and are validated before emission;
 - explicit alias-to-target edges without collapsing the local alias;
 - logical TypeScript default-library file identities that do not expose host
-  installation paths.
+  installation paths;
 - a canonical JSON Lines fixture corpus whose graph invariants and byte-level
   normalization are executable.
 
@@ -62,11 +64,12 @@ later be shared by alternate backends.
 
 ## Gate ladder
 
-1. Focused `internal/tsfacts` tests pass, including non-ASCII spans,
-   deterministic output, recovery, annotation/inference provenance, narrowing
-   baselines, contextual typing, bounded type serialization, aliases, merged
-   declarations, and declaration file identity.
-2. `go test ./internal/tsfacts ./cmd/tsfacts` passes.
+1. Focused `internal/semanticfacts` and `internal/tsfacts` tests pass, including
+   non-ASCII spans, deterministic explicit and file-wide output, recovery,
+   annotation/inference provenance, narrowing baselines, contextual typing,
+   bounded type serialization, aliases, merged declarations, declaration file
+   identity, transport validation, and canonical fixture round trips.
+2. `go test ./internal/semanticfacts ./internal/tsfacts ./cmd/tsfacts` passes.
 3. The new command builds through the repository-native build graph.
 4. The complete repository test suite passes without reduced test counts.
 5. Format and lint checks pass.

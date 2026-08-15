@@ -1,4 +1,4 @@
-package tsfacts
+package semanticfacts
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ const (
 	CapabilityGraphReferences   = "graph.references"
 	CapabilityGraphSignatures   = "graph.signatures"
 	CapabilityTypeBudgets       = "limits.type-graph"
+	CapabilityFileWideRoots     = "occurrence.file-wide"
 	CapabilityOccurrenceViews   = "occurrence.type-views"
 	CapabilityExplicitStates    = "protocol.explicit-states"
 	CapabilityCanonicalFixtures = "protocol.fixtures.v0"
@@ -31,6 +32,7 @@ var supportedCapabilities = []string{
 	CapabilityGraphReferences,
 	CapabilityGraphSignatures,
 	CapabilityTypeBudgets,
+	CapabilityFileWideRoots,
 	CapabilityOccurrenceViews,
 	CapabilityExplicitStates,
 	CapabilityCanonicalFixtures,

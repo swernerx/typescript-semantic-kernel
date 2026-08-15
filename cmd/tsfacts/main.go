@@ -12,6 +12,7 @@ import (
 	"github.com/microsoft/typescript-go/internal/bundled"
 	"github.com/microsoft/typescript-go/internal/json"
 	"github.com/microsoft/typescript-go/internal/osutil"
+	"github.com/microsoft/typescript-go/internal/semanticfacts"
 	"github.com/microsoft/typescript-go/internal/tsfacts"
 	"github.com/microsoft/typescript-go/internal/tspath"
 	"github.com/microsoft/typescript-go/internal/vfs/osvfs"
@@ -44,13 +45,13 @@ func run(ctx context.Context, defaultCurrentDirectory string, args []string, inp
 		return 2
 	}
 
-	var request tsfacts.Request
+	var request semanticfacts.Request
 	if decodeErr := json.UnmarshalRead(input, &request); decodeErr != nil {
 		fmt.Fprintf(errorOutput, "tsfacts: decode request: %v\n", decodeErr)
 		return 2
 	}
 	fs := bundled.WrapFS(osvfs.FS())
-	result, analyzeErr := tsfacts.Analyze(ctx, tsfacts.AnalyzerOptions{
+	result, analyzeErr := semanticfacts.Analyze(ctx, semanticfacts.AnalyzerOptions{
 		CurrentDirectory:   tspath.NormalizePath(*currentDirectory),
 		FS:                 fs,
 		DefaultLibraryPath: bundled.LibPath(),

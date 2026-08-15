@@ -8,16 +8,17 @@ import (
 	"io"
 
 	"github.com/microsoft/typescript-go/internal/json"
+	"github.com/microsoft/typescript-go/internal/semanticfacts"
 )
 
 const maxJSONLineBytes = 16 << 20
 
 // ReadJSONLines decodes and validates one complete semantic graph response.
 // It exists primarily as an executable consumer oracle for canonical fixtures.
-func ReadJSONLines(reader io.Reader) (*Result, error) {
+func ReadJSONLines(reader io.Reader) (*semanticfacts.Result, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64<<10), maxJSONLineBytes)
-	result := &Result{}
+	result := &semanticfacts.Result{}
 	headerSeen := false
 	lineNumber := 0
 	lastPhase := 0
@@ -85,7 +86,7 @@ func ReadJSONLines(reader io.Reader) (*Result, error) {
 	if !headerSeen {
 		return nil, errors.New("decode JSON Lines response: header is required")
 	}
-	if err := ValidateResult(result); err != nil {
+	if err := semanticfacts.ValidateResult(result); err != nil {
 		return nil, fmt.Errorf("validate semantic graph: %w", err)
 	}
 	return result, nil

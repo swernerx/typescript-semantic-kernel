@@ -1,4 +1,4 @@
-package tsfacts
+package semanticfacts
 
 import (
 	"fmt"

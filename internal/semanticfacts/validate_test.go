@@ -1,11 +1,12 @@
-package tsfacts_test
+package semanticfacts_test
 
 import (
 	"bytes"
 	"strings"
 	"testing"
 
-	"github.com/microsoft/typescript-go/internal/tsfacts"
+	tsfacts "github.com/microsoft/typescript-go/internal/semanticfacts"
+	transport "github.com/microsoft/typescript-go/internal/tsfacts"
 	"gotest.tools/v3/assert"
 )
 
@@ -15,7 +16,7 @@ func TestValidateResultAllowsSharedAndCyclicGraphEdges(t *testing.T) {
 
 	assert.NilError(t, tsfacts.ValidateResult(result))
 	var output bytes.Buffer
-	assert.NilError(t, tsfacts.WriteJSONLines(&output, result))
+	assert.NilError(t, transport.WriteJSONLines(&output, result))
 	encoded := output.String()
 	assert.Equal(t, strings.Count(encoded, `"id":"type:1"`), 1)
 	assert.Assert(t, strings.Contains(encoded, `"record":"signature"`))
