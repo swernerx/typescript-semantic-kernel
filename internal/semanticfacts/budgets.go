@@ -9,13 +9,14 @@ const (
 	DefaultMaxTypeNodes = 4096
 	DefaultMaxTypeDepth = 32
 
-	CapabilityGraphReferences   = "graph.references"
-	CapabilityGraphSignatures   = "graph.signatures"
-	CapabilityTypeBudgets       = "limits.type-graph"
-	CapabilityFileWideRoots     = "occurrence.file-wide"
-	CapabilityOccurrenceViews   = "occurrence.type-views"
-	CapabilityExplicitStates    = "protocol.explicit-states"
-	CapabilityCanonicalFixtures = "protocol.fixtures.v0"
+	CapabilityGraphReferences    = "graph.references"
+	CapabilityGraphSignatures    = "graph.signatures"
+	CapabilityTypeBudgets        = "limits.type-graph"
+	CapabilityFileWideRoots      = "occurrence.file-wide"
+	CapabilityOccurrenceViews    = "occurrence.type-views"
+	CapabilityExplicitStates     = "protocol.explicit-states"
+	CapabilityCanonicalFixtures  = "protocol.fixtures.v0"
+	CapabilityCoreCompositeTypes = "types.core-composite"
 
 	GraphIssueCheckerError             = "checker-error"
 	GraphIssueMaxTypeDepth             = "max-type-depth"
@@ -36,6 +37,7 @@ var supportedCapabilities = []string{
 	CapabilityOccurrenceViews,
 	CapabilityExplicitStates,
 	CapabilityCanonicalFixtures,
+	CapabilityCoreCompositeTypes,
 }
 
 func SupportedCapabilities() []string {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -141,7 +142,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			}
 		}
 	}
-	types := newTypeInterner(c, limits)
+	types := newTypeInterner(c, limits, slices.Contains(request.RequiredCapabilities, CapabilityCoreCompositeTypes))
 	symbols := newSymbolInterner(c, files)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
 	for _, resolved := range resolvedSelections {

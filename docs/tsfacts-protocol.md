@@ -39,7 +39,9 @@ graph budget. A request can list capabilities it requires; an unknown or
 duplicate requirement fails before project loading. Omitting either budget, or
 passing zero, selects the schema-v1 defaults of 4096 type nodes and depth 32.
 Negative values are invalid. `occurrence.file-wide` advertises support for the
-file-wide scope.
+file-wide scope. `types.core-composite` advertises protocol-native core and
+composite type variants; a request must require it before those new variants
+are emitted.
 
 File-wide enumeration visits parser-owned identifiers, private identifiers,
 literals and template-literal tokens, keyword expressions, and keyword type
@@ -96,8 +98,26 @@ incomplete type node. A failure to obtain `actualType` fails the request instead
 of emitting an ambiguous fact. See [ADR-0004](adr/0004-make-optional-type-view-availability-explicit.md).
 
 Primitive, literal, union, intersection, type parameter, object, and callable
-categories have explicit wire kinds. Every type, symbol, and signature has a
-required `state` and a compatible pair of schema-v1 booleans:
+categories have explicit wire kinds. With `types.core-composite` negotiated,
+the set additionally includes `non_primitive` for the intrinsic `object`
+keyword, `unique_symbol`, `this`, `array`, `tuple`, and `reference`.
+
+Arrays carry a generic target, one element type argument, and explicit readonly
+metadata. Tuples carry their target and ordered type arguments plus aligned
+required, optional, rest, or variadic element metadata, source labels, and
+readonly state. References keep a target and positional type arguments; an
+originating generic target points to itself. Type parameters preserve direct
+constraint, default, and instantiated-target edges. Shared checker types reuse
+one response-local ID.
+
+Union and intersection members are normalized by protocol category and stable
+checker display when the capability is negotiated. Positional type arguments
+and tuple elements retain checker order. Named checker flags remain diagnostic
+metadata; numeric compiler flags and IDs are never protocol identity. See
+[ADR-0008](adr/0008-export-core-composite-types-as-normalized-graph-nodes.md).
+
+Every type, symbol, and signature has a required `state` and a compatible pair
+of schema-v1 booleans:
 
 - `complete` means all structure claimed by the variant is present;
 - `truncated` means a known structure was cut off and can potentially be
@@ -193,7 +213,9 @@ Schema v1 readers ignore unknown object fields, accept additional sorted
 capability names, and retain unknown issue codes. They reject unknown record,
 entity-state, type-kind, and signature-kind variants. New variants must be
 gated by a capability explicitly requested by the consumer; incompatible
-required fields or changed meanings require a new schema version.
+required fields or changed meanings require a new schema version. If
+`types.core-composite` is not requested, the producer retains the earlier
+truncated or unsupported fallback for its new variants.
 
 This spike intentionally omits inference traces, diagnostic payloads, project
 references, daemon reuse, symbol/signature budget counters, and the OXC bridge.

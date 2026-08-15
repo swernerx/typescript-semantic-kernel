@@ -31,7 +31,11 @@ Schema v1 currently guarantees:
 - deterministic type-node and traversal-depth budgets with referential cutoff
   sentinels and header accounting;
 - explicit complete, truncated, unsupported, error, and recovered state;
-- stable per-response type IDs that never reuse compiler-internal numeric IDs.
+- stable per-response type IDs that never reuse compiler-internal numeric IDs;
+- negotiated core and composite variants for intrinsic and literal types,
+  unions and intersections, arrays, tuples, references, type parameters,
+  `this`, unique symbols, targets, type arguments, direct constraints, and
+  defaults;
 - an explicit actual type plus contextual, widened, apparent, and declared
   roots whose absence is explained by machine-readable view states;
 - mutually exclusive annotation and inferred origin views for symbol-backed
