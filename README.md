@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> This is a private experimental derivative of
+> [`microsoft/typescript-go`](https://github.com/microsoft/typescript-go), not
+> an official Microsoft or TypeScript project. The experiment explores a small,
+> stable interface for attaching TypeScript semantic facts to source code. See
+> [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
+
 # TypeScript 7
 
 [Not sure what this is? Read the announcement post!](https://devblogs.microsoft.com/typescript/typescript-native-port/)
