@@ -492,6 +492,112 @@ func TestAnalyzeMarksRecoveredFacts(t *testing.T) {
 	assert.Assert(t, !result.Facts[0].Complete)
 }
 
+func TestAnalyzeNegotiatesCapabilitiesAndReportsDefaultBudgets(t *testing.T) {
+	t.Parallel()
+	const source = `const value = 1; value;`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion:        tsfacts.SchemaVersion,
+		RequiredCapabilities: []string{tsfacts.CapabilityExplicitStates, tsfacts.CapabilityTypeBudgets},
+		Project:              "tsconfig.json",
+		Selections:           []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	assert.DeepEqual(t, result.Header.Capabilities, tsfacts.SupportedCapabilities())
+	assert.DeepEqual(t, result.Header.Budgets.Limits, tsfacts.BudgetLimits{
+		MaxTypeNodes: tsfacts.DefaultMaxTypeNodes,
+		MaxTypeDepth: tsfacts.DefaultMaxTypeDepth,
+	})
+	assert.Equal(t, result.Header.Budgets.TypeNodesUsed, len(result.Types))
+	assert.Assert(t, !result.Header.Budgets.Truncated)
+}
+
+func TestAnalyzeRejectsUnsupportedRequiredCapability(t *testing.T) {
+	t.Parallel()
+	const source = `const value = 1; value;`
+	_, err := tsfacts.Analyze(t.Context(), fixtureOptions(source), tsfacts.Request{
+		SchemaVersion:        tsfacts.SchemaVersion,
+		RequiredCapabilities: []string{"future.semantic-magic"},
+		Project:              "tsconfig.json",
+		Selections:           []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	assert.ErrorContains(t, err, `unsupported required capability "future.semantic-magic"`)
+}
+
+func TestAnalyzeRejectsInvalidBudgets(t *testing.T) {
+	t.Parallel()
+	const source = `const value = 1; value;`
+	_, err := tsfacts.Analyze(t.Context(), fixtureOptions(source), tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Budgets:       tsfacts.BudgetLimits{MaxTypeNodes: -1},
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	assert.ErrorContains(t, err, "budgets.maxTypeNodes must be positive")
+}
+
+func TestAnalyzeAppliesTypeNodeBudgetDeterministically(t *testing.T) {
+	t.Parallel()
+	const source = `declare const condition: boolean; const value: string | number = condition ? "text" : 1; value;`
+	request := tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Budgets:       tsfacts.BudgetLimits{MaxTypeNodes: 1, MaxTypeDepth: 32},
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 1)},
+	}
+	first := analyzeFixture(t, source, request)
+	second := analyzeFixture(t, source, request)
+
+	assert.DeepEqual(t, first.Header.Budgets, tsfacts.BudgetReport{
+		Limits:               request.Budgets,
+		TypeNodesUsed:        1,
+		MaxTypeDepthObserved: 1,
+		Truncated:            true,
+	})
+	assert.Equal(t, len(first.Types), 2)
+	root := typeByID(t, first, first.Facts[0].ActualType)
+	assert.Equal(t, root.State, tsfacts.EntityStateTruncated)
+	assert.DeepEqual(t, root.Issues, []tsfacts.GraphIssue{{Code: tsfacts.GraphIssueReferencedIncompleteType}})
+	limit := typeByID(t, first, root.Members[0])
+	assert.Equal(t, limit.TypeKind, "truncated")
+	assert.Equal(t, limit.State, tsfacts.EntityStateTruncated)
+	assert.DeepEqual(t, limit.Issues, []tsfacts.GraphIssue{{Code: tsfacts.GraphIssueMaxTypeNodes, Limit: 1}})
+	assert.Assert(t, first.Facts[0].Truncated)
+	assert.Assert(t, !first.Facts[0].Complete)
+
+	var firstOutput bytes.Buffer
+	var secondOutput bytes.Buffer
+	assert.NilError(t, tsfacts.WriteJSONLines(&firstOutput, first))
+	assert.NilError(t, tsfacts.WriteJSONLines(&secondOutput, second))
+	assert.Equal(t, firstOutput.String(), secondOutput.String())
+}
+
+func TestAnalyzeAppliesTypeDepthBudget(t *testing.T) {
+	t.Parallel()
+	const source = `function use<T extends U | boolean, U extends string | number>(value: T) { value; }`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Budgets:       tsfacts.BudgetLimits{MaxTypeNodes: 32, MaxTypeDepth: 1},
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	assert.Assert(t, result.Header.Budgets.Truncated)
+	assert.Assert(t, result.Header.Budgets.MaxTypeDepthObserved > result.Header.Budgets.Limits.MaxTypeDepth)
+	depthSentinelFound := false
+	for _, record := range result.Types {
+		if slices.ContainsFunc(record.Issues, func(issue tsfacts.GraphIssue) bool {
+			return issue.Code == tsfacts.GraphIssueMaxTypeDepth && issue.Limit == 1
+		}) {
+			depthSentinelFound = true
+			assert.Equal(t, record.State, tsfacts.EntityStateTruncated)
+		}
+	}
+	assert.Assert(t, depthSentinelFound)
+	assert.Assert(t, result.Facts[0].Truncated)
+}
+
 func TestWriteJSONLinesIsDeterministic(t *testing.T) {
 	t.Parallel()
 	const source = `const value = "stable" as const; value;`

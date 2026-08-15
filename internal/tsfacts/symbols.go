@@ -110,10 +110,12 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 
 	candidates := make([]declarationCandidate, 0, len(symbol.Declarations))
 	complete := true
+	issues := make([]GraphIssue, 0, 2)
 	for _, declaration := range symbol.Declarations {
 		candidate, ok := i.declarationCandidate(declaration)
 		if !ok {
 			complete = false
+			issues = appendGraphIssue(issues, GraphIssueUnrepresentableDecl)
 			continue
 		}
 		candidates = append(candidates, candidate)
@@ -143,10 +145,18 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 		aliased := i.checker.GetAliasedSymbol(symbol)
 		if aliased == nil || aliased == symbol || aliased == i.checker.GetUnknownSymbol() {
 			complete = false
+			issues = appendGraphIssue(issues, GraphIssueUnresolvedAlias)
 		} else {
 			aliasedSymbol = i.intern(aliased)
-			complete = complete && i.complete(aliasedSymbol)
+			if !i.complete(aliasedSymbol) {
+				complete = false
+				issues = appendGraphIssue(issues, GraphIssueReferencedAlias)
+			}
 		}
+	}
+	state := EntityStateComplete
+	if !complete {
+		state = EntityStateTruncated
 	}
 
 	i.symbols[index] = SymbolRecord{
@@ -156,10 +166,23 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 		Roles:         symbolRoles(symbol.Flags),
 		Declarations:  declarations,
 		AliasedSymbol: aliasedSymbol,
+		State:         state,
+		Issues:        issues,
 		Complete:      complete,
 		Truncated:     !complete,
 	}
 	return id
+}
+
+func appendGraphIssue(issues []GraphIssue, code string) []GraphIssue {
+	for _, issue := range issues {
+		if issue.Code == code {
+			return issues
+		}
+	}
+	issues = append(issues, GraphIssue{Code: code})
+	sort.Slice(issues, func(left, right int) bool { return issues[left].Code < issues[right].Code })
+	return issues
 }
 
 func (i *symbolInterner) declarationCandidate(declaration *ast.Node) (declarationCandidate, bool) {
@@ -207,6 +230,18 @@ func (i *symbolInterner) complete(id SymbolID) bool {
 	for index := range i.symbols {
 		if i.symbols[index].ID == id {
 			return i.symbols[index].Complete
+		}
+	}
+	return false
+}
+
+func (i *symbolInterner) truncated(id SymbolID) bool {
+	if id == "" {
+		return false
+	}
+	for index := range i.symbols {
+		if i.symbols[index].ID == id {
+			return i.symbols[index].State == EntityStateTruncated
 		}
 	}
 	return false

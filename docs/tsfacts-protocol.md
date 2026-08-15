@@ -5,7 +5,7 @@ request from standard input and writes JSON Lines to standard output.
 
 ```sh
 go run ./cmd/tsfacts <<'JSON'
-{"schemaVersion":1,"project":"tsconfig.json","files":["src/example.ts"],"selections":[{"file":"src/example.ts","start":120,"end":125}]}
+{"schemaVersion":1,"requiredCapabilities":["limits.type-graph","protocol.explicit-states"],"budgets":{"maxTypeNodes":4096,"maxTypeDepth":32},"project":"tsconfig.json","files":["src/example.ts"],"selections":[{"file":"src/example.ts","start":120,"end":125}]}
 JSON
 ```
 
@@ -20,6 +20,12 @@ inside one source token in the current spike. The response contains, in order:
 5. interned `symbol` records, including alias-target edges;
 6. interned `signature` records;
 7. one `fact` record per requested selection.
+
+The header advertises a sorted capability list and reports the effective type
+graph budget. A request can list capabilities it requires; an unknown or
+duplicate requirement fails before project loading. Omitting either budget, or
+passing zero, selects the schema-v1 defaults of 4096 type nodes and depth 32.
+Negative values are invalid.
 
 The first slice exposes the checker's `getTypeAtLocation` result as the required
 `actualType` view. It is the type TypeScript observes at the selected source
@@ -69,9 +75,20 @@ incomplete type node. A failure to obtain `actualType` fails the request instead
 of emitting an ambiguous fact. See [ADR-0004](adr/0004-make-optional-type-view-availability-explicit.md).
 
 Primitive, literal, union, intersection, type parameter, object, and callable
-categories have explicit wire kinds.
-Object details and type categories not yet represented structurally are marked
-truncated and retain display text only as diagnostic metadata.
+categories have explicit wire kinds. Every type, symbol, and signature has a
+required `state` and a compatible pair of schema-v1 booleans:
+
+- `complete` means all structure claimed by the variant is present;
+- `truncated` means a known structure was cut off and can potentially be
+  retried or implemented;
+- `unsupported` means schema v1 has no structural representation for the
+  checker form;
+- `error` identifies a checker error entity.
+
+Every non-complete entity has a sorted, unique, machine-readable `issues` list.
+Object details not yet represented structurally use `truncated` with
+`unsupported-structure`; an unrepresented type form uses `unsupported` with
+`unsupported-type-form`. Human-readable `display` remains diagnostic metadata.
 
 When TypeScript exposes a symbol at the selected token, the fact contains a
 response-local `symbol` handle and its direct declaration handles. Symbol
@@ -99,14 +116,16 @@ files additionally carry `selected: true` and `diagnosticCount`. A file emitted
 only to identify a declaration omits both fields because it was not selected
 for diagnostic collection.
 
-Each fact reports three independent states:
+Each fact reports three independent booleans:
 
 - `complete`: every referenced type view and symbol edge is represented and the
   selected file has no diagnostics;
 - `recovered`: the checker produced the fact while the file had syntactic or
   semantic diagnostics;
-- `truncated`: at least one referenced type view exceeded the current schema or
-  serializer limits.
+- `truncated`: at least one referenced entity has state `truncated`.
+
+An `unsupported` or `error` root makes the fact incomplete without setting
+`truncated`. This distinction tells consumers whether a larger budget can help.
 
 Per-response IDs such as `type:1`, `symbol:1`, and `declaration:1` are
 deterministic handles only. They are not compiler-internal IDs and must not be
@@ -127,6 +146,28 @@ unknown variant fails explicitly instead of being guessed. The existing
 `opaque` and `truncated` kinds are named schema variants, not unknown fallbacks.
 See [ADR-0005](adr/0005-use-response-local-referential-graph-tables.md).
 
-This spike intentionally omits inference traces, configurable limits,
-diagnostic payloads, project references, daemon reuse, and the OXC bridge. These
-remain explicit Phase 0 work rather than undocumented protocol behavior.
+Type graph accounting charges a checker-backed type once when its ID is first
+allocated, so sharing and cycles do not consume extra budget. The actual root
+has depth zero. Crossing a limit produces a shared referential `truncated`
+sentinel with a `max-type-nodes` or `max-type-depth` issue and its effective
+limit. Sentinel nodes are not charged. Owners that point to them carry
+`referenced-incomplete-type`. The header reports charged nodes, deepest
+attempted traversal, and whether a budget cutoff occurred. See
+[ADR-0006](adr/0006-negotiate-capabilities-and-bound-type-graphs.md).
+
+For identical input, normalization fixes capability and issue ordering, file
+and declaration ordering, first-discovery graph IDs, table category order,
+request-ordered facts, and deterministic JSON object keys. Canonical fixture
+corpus v0 covers cycles and sharing, missing type views, budget truncation,
+diagnostic recovery, and all four entity states. Tests decode, validate, and
+re-encode every fixture byte for byte.
+
+Schema v1 readers ignore unknown object fields, accept additional sorted
+capability names, and retain unknown issue codes. They reject unknown record,
+entity-state, type-kind, and signature-kind variants. New variants must be
+gated by a capability explicitly requested by the consumer; incompatible
+required fields or changed meanings require a new schema version.
+
+This spike intentionally omits inference traces, diagnostic payloads, project
+references, daemon reuse, symbol/signature budget counters, and the OXC bridge.
+These remain explicit Phase 0 work rather than undocumented protocol behavior.

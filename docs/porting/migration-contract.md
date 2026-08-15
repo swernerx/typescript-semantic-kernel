@@ -25,7 +25,10 @@ Schema v1 currently guarantees:
 - normalized project-relative file identities;
 - zero-based, half-open UTF-8 byte spans;
 - deterministic record ordering for an identical request and source tree;
-- explicit complete, recovered, and truncated state;
+- capability negotiation and explicit schema-v1 compatibility behavior;
+- deterministic type-node and traversal-depth budgets with referential cutoff
+  sentinels and header accounting;
+- explicit complete, truncated, unsupported, error, and recovered state;
 - stable per-response type IDs that never reuse compiler-internal numeric IDs.
 - an explicit actual type plus contextual, widened, apparent, and declared
   roots whose absence is explained by machine-readable view states;
@@ -39,18 +42,23 @@ Schema v1 currently guarantees:
 - explicit alias-to-target edges without collapsing the local alias;
 - logical TypeScript default-library file identities that do not expose host
   installation paths.
+- a canonical JSON Lines fixture corpus whose graph invariants and byte-level
+  normalization are executable.
 
 The initial slice does not guarantee complete structural serialization of every
 TypeScript type, inference traces, declarations outside the project root or
-TypeScript default libraries, project references, or an OXC bridge. Those are
-migration queue items, not implicit passes.
+TypeScript default libraries, symbol/signature budget counters, project
+references, or an OXC bridge. Those are migration queue items, not implicit
+passes.
 
 ## Equivalence oracle
 
 The Go checker is the first authoritative backend. Focused structured fixtures
-exercise the adapter directly. The corpus will grow to differential fixtures
-against TypeScript's observable type and symbol behavior and will later be
-shared by alternate backends.
+exercise the adapter directly. Canonical fixture corpus v0 is already a
+backend-neutral consumer oracle: every fixture must decode, satisfy graph
+invariants, and re-encode identically. The corpus will grow to differential
+fixtures against TypeScript's observable type and symbol behavior and will
+later be shared by alternate backends.
 
 ## Gate ladder
 
