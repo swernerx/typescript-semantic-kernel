@@ -221,6 +221,15 @@ func (c *Checker) GetReturnTypeOfSignature(sig *Signature) *Type {
 	return c.getReturnTypeOfSignature(sig)
 }
 
+func (c *Checker) GetTypeArgumentsOfSignature(sig *Signature) []*Type {
+	if sig.target == nil || sig.mapper == nil {
+		return nil
+	}
+	return core.Map(sig.target.typeParameters, func(parameter *Type) *Type {
+		return c.instantiateType(parameter, sig.mapper)
+	})
+}
+
 func (c *Checker) HasEffectiveRestParameter(signature *Signature) bool {
 	return c.hasEffectiveRestParameter(signature)
 }

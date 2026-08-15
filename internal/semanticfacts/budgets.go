@@ -18,15 +18,17 @@ const (
 	CapabilityCanonicalFixtures  = "protocol.fixtures.v0"
 	CapabilityCoreCompositeTypes = "types.core-composite"
 
-	GraphIssueCheckerError             = "checker-error"
-	GraphIssueMaxTypeDepth             = "max-type-depth"
-	GraphIssueMaxTypeNodes             = "max-type-nodes"
-	GraphIssueReferencedIncompleteType = "referenced-incomplete-type"
-	GraphIssueUnsupportedStructure     = "unsupported-structure"
-	GraphIssueUnsupportedTypeForm      = "unsupported-type-form"
-	GraphIssueUnrepresentableDecl      = "unrepresentable-declaration"
-	GraphIssueUnresolvedAlias          = "unresolved-alias"
-	GraphIssueReferencedAlias          = "referenced-incomplete-alias"
+	GraphIssueCheckerError                  = "checker-error"
+	GraphIssueMaxTypeDepth                  = "max-type-depth"
+	GraphIssueMaxTypeNodes                  = "max-type-nodes"
+	GraphIssueReferencedIncompleteSignature = "referenced-incomplete-signature"
+	GraphIssueReferencedIncompleteSymbol    = "referenced-incomplete-symbol"
+	GraphIssueReferencedIncompleteType      = "referenced-incomplete-type"
+	GraphIssueUnsupportedStructure          = "unsupported-structure"
+	GraphIssueUnsupportedTypeForm           = "unsupported-type-form"
+	GraphIssueUnrepresentableDecl           = "unrepresentable-declaration"
+	GraphIssueUnresolvedAlias               = "unresolved-alias"
+	GraphIssueReferencedAlias               = "referenced-incomplete-alias"
 )
 
 var supportedCapabilities = []string{

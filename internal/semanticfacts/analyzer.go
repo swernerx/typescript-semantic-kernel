@@ -142,16 +142,23 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			}
 		}
 	}
-	types := newTypeInterner(c, limits, slices.Contains(request.RequiredCapabilities, CapabilityCoreCompositeTypes))
-	symbols := newSymbolInterner(c, files)
+	graph := newGraphInterners(
+		c,
+		files,
+		limits,
+		slices.Contains(request.RequiredCapabilities, CapabilityCoreCompositeTypes),
+		slices.Contains(request.RequiredCapabilities, CapabilityGraphReferences),
+		slices.Contains(request.RequiredCapabilities, CapabilityGraphSignatures),
+	)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
 	for _, resolved := range resolvedSelections {
-		fact, factErr := analyzeSelection(c, types, symbols, resolved.selected, resolved.selection)
+		fact, factErr := analyzeSelection(c, graph.types, graph.symbols, resolved.selected, resolved.selection)
 		if factErr != nil {
 			return nil, factErr
 		}
 		facts = append(facts, fact)
 	}
+	graph.finalize(facts)
 
 	projectID, projectIdentityErr := projectIdentity(projectPath, currentDirectory, options.FS)
 	if projectIdentityErr != nil {
@@ -165,15 +172,16 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			TypeScriptRevision: UpstreamRevision,
 			OffsetEncoding:     OffsetEncoding,
 			Capabilities:       SupportedCapabilities(),
-			Budgets:            types.budgetReport(),
+			Budgets:            graph.types.budgetReport(),
 			Project:            projectID,
 			CompilerOptions:    parsed.CompilerOptions(),
 			DiagnosticCount:    diagnosticCount,
 		},
 		Files:        files.records(),
-		Types:        types.types,
-		Declarations: symbols.declarations,
-		Symbols:      symbols.symbols,
+		Types:        graph.types.types,
+		Declarations: graph.symbols.declarations,
+		Symbols:      graph.symbols.symbols,
+		Signatures:   graph.signatures.signatures,
 		Facts:        facts,
 	}, nil
 }
@@ -348,27 +356,6 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		fact.ConstraintType = types.intern(constraint)
 	}
 
-	fact.Truncated = types.truncated(fact.TypeAtLocation) ||
-		types.truncated(fact.AnnotationType) ||
-		types.truncated(fact.InferredType) ||
-		types.truncated(fact.ContextualType) ||
-		types.truncated(fact.WidenedType) ||
-		types.truncated(fact.ApparentType) ||
-		types.truncated(fact.DeclaredType) ||
-		types.truncated(fact.NarrowedType) ||
-		types.truncated(fact.ConstraintType) ||
-		symbols.truncated(fact.Symbol)
-	fact.Complete = !fact.Recovered &&
-		types.complete(fact.TypeAtLocation) &&
-		types.complete(fact.AnnotationType) &&
-		types.complete(fact.InferredType) &&
-		types.complete(fact.ContextualType) &&
-		types.complete(fact.WidenedType) &&
-		types.complete(fact.ApparentType) &&
-		types.complete(fact.DeclaredType) &&
-		types.complete(fact.NarrowedType) &&
-		types.complete(fact.ConstraintType) &&
-		symbols.complete(fact.Symbol)
 	return fact, nil
 }
 

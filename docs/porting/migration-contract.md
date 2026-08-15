@@ -43,6 +43,11 @@ Schema v1 currently guarantees:
   unflowed checker types for the selected symbol and property receiver;
 - response-local symbol and declaration handles with deterministic declaration
   ordering;
+- negotiated object-property and symbol-member traversal with linked value and
+  declared types;
+- independently traversable call and construct overloads plus readonly index
+  signatures, parameter symbols, returns, generic targets, type parameters, and
+  instantiated arguments;
 - response-local type, symbol, declaration, and signature tables whose
   references preserve sharing and cycles and are validated before emission;
 - explicit alias-to-target edges without collapsing the local alias;

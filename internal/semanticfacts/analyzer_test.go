@@ -325,9 +325,10 @@ func TestAnalyzePreservesAliasAndTargetSymbols(t *testing.T) {
 		FS:                 bundled.WrapFS(fs),
 		DefaultLibraryPath: bundled.LibPath(),
 	}, tsfacts.Request{
-		SchemaVersion: tsfacts.SchemaVersion,
-		Project:       "tsconfig.json",
-		Selections:    []tsfacts.Selection{selectionAt(source, "localGreeting", 1)},
+		SchemaVersion:        tsfacts.SchemaVersion,
+		RequiredCapabilities: []string{tsfacts.CapabilityGraphReferences},
+		Project:              "tsconfig.json",
+		Selections:           []tsfacts.Selection{selectionAt(source, "localGreeting", 1)},
 	})
 	assert.NilError(t, err)
 
@@ -341,6 +342,7 @@ func TestAnalyzePreservesAliasAndTargetSymbols(t *testing.T) {
 	assert.Equal(t, target.Name, "greeting")
 	assert.Assert(t, slices.Contains(target.Roles, "variable"))
 	assert.Equal(t, declarationByID(t, result, target.Declarations[0]).File, "src/values.ts")
+	assert.Assert(t, target.Type != "")
 	assert.Assert(t, alias.Complete)
 	assert.Assert(t, target.Complete)
 
