@@ -44,10 +44,13 @@ const choice = Choice.Yes;
 	assert.Equal(t, len(result.Facts), 5)
 
 	literal := typeByID(t, result, result.Facts[0].TypeAtLocation)
+	assert.Equal(t, result.Facts[0].ActualType, result.Facts[0].TypeAtLocation)
+	assert.Equal(t, result.Facts[0].TypeViewStates.Actual, tsfacts.TypeViewAvailable)
 	assert.Equal(t, literal.TypeKind, "literal")
 	assert.Equal(t, literal.Literal.Kind, "string")
 	assert.Equal(t, literal.Literal.Value, "hello")
 	assert.Assert(t, result.Facts[0].ContextualType != "")
+	assert.Equal(t, result.Facts[0].TypeViewStates.Contextual, tsfacts.TypeViewAvailable)
 	assert.Equal(t, typeByID(t, result, result.Facts[0].ContextualType).TypeKind, "string")
 
 	union := typeByID(t, result, result.Facts[1].TypeAtLocation)
@@ -57,7 +60,10 @@ const choice = Choice.Yes;
 
 	narrowed := typeByID(t, result, result.Facts[2].TypeAtLocation)
 	assert.Equal(t, narrowed.TypeKind, "string")
-	assert.Assert(t, result.Facts[2].Complete)
+	assert.Assert(t, result.Facts[2].ApparentType != "")
+	assert.Equal(t, typeByID(t, result, result.Facts[2].ApparentType).TypeKind, "object")
+	assert.Assert(t, result.Facts[2].Truncated)
+	assert.Assert(t, !result.Facts[2].Complete)
 
 	callable := typeByID(t, result, result.Facts[3].TypeAtLocation)
 	assert.Equal(t, callable.TypeKind, "callable")
@@ -112,6 +118,40 @@ if (typeof annotated === "string") {
 	assert.Equal(t, narrowed.TypeAtLocation, narrowed.NarrowedType)
 	assert.Equal(t, typeByID(t, result, narrowed.AnnotationType).TypeKind, "union")
 	assert.Equal(t, typeByID(t, result, narrowed.NarrowedType).TypeKind, "string")
+	assert.Assert(t, narrowed.DeclaredType != "")
+	assert.Equal(t, narrowed.TypeViewStates.Declared, tsfacts.TypeViewAvailable)
+	assert.Equal(t, narrowed.DeclaredType, narrowed.AnnotationType)
+}
+
+func TestAnalyzeReportsOptionalTypeViewAvailability(t *testing.T) {
+	t.Parallel()
+	const source = `
+function read<T extends { value: string }>(input: T) {
+    input;
+}
+interface Message { text: string }
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections: []tsfacts.Selection{
+			selectionAt(source, "input", 1),
+			selectionAt(source, "Message", 0),
+		},
+	})
+
+	typeParameter := result.Facts[0]
+	assert.Equal(t, typeParameter.ActualType, typeParameter.TypeAtLocation)
+	assert.Equal(t, typeParameter.TypeViewStates.Contextual, tsfacts.TypeViewUnavailable)
+	assert.Assert(t, typeParameter.ApparentType != "")
+	assert.Equal(t, typeParameter.TypeViewStates.Apparent, tsfacts.TypeViewAvailable)
+	assert.Equal(t, typeParameter.TypeViewStates.Declared, tsfacts.TypeViewSameAsActual)
+
+	typeDeclaration := result.Facts[1]
+	assert.Equal(t, typeDeclaration.TypeViewStates.Contextual, tsfacts.TypeViewInapplicable)
+	assert.Equal(t, typeDeclaration.TypeViewStates.Widened, tsfacts.TypeViewSameAsActual)
+	assert.Equal(t, typeDeclaration.TypeViewStates.Apparent, tsfacts.TypeViewSameAsActual)
+	assert.Equal(t, typeDeclaration.TypeViewStates.Declared, tsfacts.TypeViewSameAsActual)
 }
 
 func TestAnalyzeDoesNotMisclassifyContainingAnnotations(t *testing.T) {

@@ -21,9 +21,15 @@ inside one source token in the current spike. The response contains, in order:
 6. one `fact` record per requested selection.
 
 The first slice exposes the checker's `getTypeAtLocation` result as the required
-`typeAtLocation` view. It is the type TypeScript observes at the selected source
-occurrence and remains the compatibility field for consumers that need only one
-answer.
+`actualType` view. It is the type TypeScript observes at the selected source
+occurrence. The equal `typeAtLocation` field remains available for schema-v1
+compatibility.
+
+Each occurrence is identified by the tuple of its normalized file ID, zero-based
+half-open UTF-8 token span, and TypeScript syntax kind. Flow-sensitive uses are
+separate occurrences even when they resolve to the same symbol. Repeating an
+identical request selection repeats the same occurrence fact in request order;
+it does not create a new semantic identity.
 
 For a value occurrence backed by a symbol, schema v1 additionally classifies
 the origin and flow state:
@@ -46,10 +52,23 @@ function return annotation describes the return type rather than the callable
 symbol. Type-only occurrences do not receive value-origin or narrowing views.
 See [ADR-0003](adr/0003-classify-symbol-backed-type-view-provenance.md).
 
-When distinct and available the command also emits contextual, widened, and
-constraint views. Those expression-specific views are independent of the
-annotation/inference classification. Primitive, literal, union, intersection,
-type parameter, object, and callable categories have explicit wire kinds.
+When distinct and available the command also emits contextual, widened,
+apparent, declared, and constraint views. The declared view is the unflowed
+value-symbol type at value occurrences or the checker's declared type at type
+occurrences. The apparent view applies the checker's apparent-type operation to
+the actual root. Those views are independent of the annotation/inference
+classification.
+
+Required `typeViewStates` entries explain each contract view. `available` means
+the root is present, `same-as-actual` means it was omitted only to avoid a
+duplicate edge, `inapplicable` means the operation has no meaning for that
+syntax, and `unavailable` means the operation applies but the checker returned
+no type. Truncation is separate: an available root may point to an explicitly
+incomplete type node. A failure to obtain `actualType` fails the request instead
+of emitting an ambiguous fact. See [ADR-0004](adr/0004-make-optional-type-view-availability-explicit.md).
+
+Primitive, literal, union, intersection, type parameter, object, and callable
+categories have explicit wire kinds.
 Object details and type categories not yet represented structurally are marked
 truncated and retain display text only as diagnostic metadata.
 

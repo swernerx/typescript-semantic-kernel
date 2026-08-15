@@ -218,13 +218,15 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q has no semantic type", selection.Start, selection.End, selection.File)
 	}
 	fact := FactRecord{
-		Record:         "fact",
-		File:           selected.id,
-		Span:           Span{Start: start, End: node.End()},
-		SyntaxKind:     node.Kind.String(),
-		TypeAtLocation: types.intern(observed),
-		Recovered:      selected.diagnosticCount != 0,
+		Record:     "fact",
+		File:       selected.id,
+		Span:       Span{Start: start, End: node.End()},
+		SyntaxKind: node.Kind.String(),
+		Recovered:  selected.diagnosticCount != 0,
 	}
+	fact.ActualType = types.intern(observed)
+	fact.TypeAtLocation = fact.ActualType
+	fact.TypeViewStates.Actual = TypeViewAvailable
 	symbol := c.GetSymbolAtLocation(node)
 	fact.Symbol = symbols.intern(symbol)
 	fact.Declarations = symbols.declarationsOf(fact.Symbol)
@@ -232,15 +234,16 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 	fact.AnnotationType = types.intern(views.annotation)
 	fact.InferredType = types.intern(views.inferred)
 	fact.NarrowedType = types.intern(views.narrowed)
-	if ast.IsExpression(node) {
-		contextual := c.GetContextualType(node, checker.ContextFlagsNone)
-		if contextual != nil && contextual != observed {
-			fact.ContextualType = types.intern(contextual)
-		}
-	}
-	if widened := c.GetWidenedType(observed); widened != nil && widened != observed {
-		fact.WidenedType = types.intern(widened)
-	}
+	fact.ContextualType, fact.TypeViewStates.Contextual = internOptionalTypeView(
+		types,
+		observed,
+		contextualTypeAtOccurrence(c, node),
+		ast.IsExpressionNode(node),
+	)
+	fact.WidenedType, fact.TypeViewStates.Widened = internOptionalTypeView(types, observed, c.GetWidenedType(observed), true)
+	fact.ApparentType, fact.TypeViewStates.Apparent = internOptionalTypeView(types, observed, c.GetApparentType(observed), true)
+	declared, declaredApplies := declaredTypeAtOccurrence(c, node, symbol)
+	fact.DeclaredType, fact.TypeViewStates.Declared = internOptionalTypeView(types, observed, declared, declaredApplies)
 	if constraint := c.GetBaseConstraintOfType(observed); constraint != nil && constraint != observed {
 		fact.ConstraintType = types.intern(constraint)
 	}
@@ -250,9 +253,51 @@ func analyzeSelection(c *checker.Checker, types *typeInterner, symbols *symbolIn
 		!types.complete(fact.InferredType) ||
 		!types.complete(fact.ContextualType) ||
 		!types.complete(fact.WidenedType) ||
+		!types.complete(fact.ApparentType) ||
+		!types.complete(fact.DeclaredType) ||
 		!types.complete(fact.NarrowedType) ||
 		!types.complete(fact.ConstraintType) ||
 		!symbols.complete(fact.Symbol)
 	fact.Complete = !fact.Recovered && !fact.Truncated
 	return fact, nil
+}
+
+func contextualTypeAtOccurrence(c *checker.Checker, node *ast.Node) *checker.Type {
+	if !ast.IsExpressionNode(node) {
+		return nil
+	}
+	return c.GetContextualType(node, checker.ContextFlagsNone)
+}
+
+func declaredTypeAtOccurrence(c *checker.Checker, node *ast.Node, symbol *ast.Symbol) (*checker.Type, bool) {
+	if symbol == nil {
+		return nil, false
+	}
+	valueOccurrence := isValueOccurrence(c, node, symbol)
+	if symbol.Flags&ast.SymbolFlagsAlias != 0 {
+		symbol = c.GetAliasedSymbol(symbol)
+		if symbol == nil {
+			return nil, true
+		}
+	}
+	if valueOccurrence && symbol.Flags&ast.SymbolFlagsValue != 0 {
+		return c.GetTypeOfSymbolAtLocation(symbol, nil), true
+	}
+	if symbol.Flags&ast.SymbolFlagsType != 0 {
+		return c.GetDeclaredTypeOfSymbol(symbol), true
+	}
+	return nil, false
+}
+
+func internOptionalTypeView(types *typeInterner, actual *checker.Type, candidate *checker.Type, applies bool) (TypeID, string) {
+	if !applies {
+		return "", TypeViewInapplicable
+	}
+	if candidate == nil {
+		return "", TypeViewUnavailable
+	}
+	if candidate == actual {
+		return "", TypeViewSameAsActual
+	}
+	return types.intern(candidate), TypeViewAvailable
 }
