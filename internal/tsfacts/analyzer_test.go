@@ -14,12 +14,13 @@ import (
 func TestAnalyzeSelectedSemanticViews(t *testing.T) {
 	t.Parallel()
 	const source = `
+declare const condition: boolean;
 const greeting: string = "hello";
-let value: string | number = Math.random() ? greeting : 1;
+let value: string | number = condition ? greeting : 1;
 if (typeof value === "string") {
     value;
 }
-const callable = (input: string) => input.length;
+const callable = (input: string) => input;
 enum Choice { Yes = "yes" }
 const choice = Choice.Yes;
 `
