@@ -1,0 +1,253 @@
+package tsfacts
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/microsoft/typescript-go/internal/ast"
+	"github.com/microsoft/typescript-go/internal/astnav"
+	"github.com/microsoft/typescript-go/internal/checker"
+	"github.com/microsoft/typescript-go/internal/compiler"
+	"github.com/microsoft/typescript-go/internal/core"
+	"github.com/microsoft/typescript-go/internal/tsoptions"
+	"github.com/microsoft/typescript-go/internal/tspath"
+	"github.com/microsoft/typescript-go/internal/vfs"
+)
+
+type AnalyzerOptions struct {
+	CurrentDirectory   string
+	FS                 vfs.FS
+	DefaultLibraryPath string
+}
+
+type selectedFile struct {
+	file            *ast.SourceFile
+	id              string
+	diagnosticCount int
+}
+
+func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Result, error) {
+	if err := validateRequest(request); err != nil {
+		return nil, err
+	}
+	if options.FS == nil {
+		return nil, errors.New("filesystem is required")
+	}
+
+	currentDirectory := tspath.NormalizePath(options.CurrentDirectory)
+	if !tspath.IsRootedDiskPath(currentDirectory) {
+		return nil, fmt.Errorf("current directory %q must be an absolute disk path", options.CurrentDirectory)
+	}
+	projectPath := tspath.GetNormalizedAbsolutePath(request.Project, currentDirectory)
+	projectRoot := tspath.GetDirectoryPath(projectPath)
+	host := compiler.NewCompilerHost(currentDirectory, options.FS, options.DefaultLibraryPath, nil, nil)
+	parsed, configErrors := tsoptions.GetParsedCommandLineOfConfigFile(projectPath, &core.CompilerOptions{}, nil, host, nil)
+	if len(configErrors) != 0 {
+		return nil, fmt.Errorf("project configuration %q contains %d error(s)", request.Project, len(configErrors))
+	}
+
+	program := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: host})
+	program.BindSourceFiles()
+
+	allowedFiles, allowedFilesErr := normalizeAllowedFiles(request.Files, projectRoot, options.FS)
+	if allowedFilesErr != nil {
+		return nil, allowedFilesErr
+	}
+	selected := make(map[tspath.Path]*selectedFile)
+	resolvedSelections := make([]struct {
+		selection Selection
+		selected  *selectedFile
+	}, 0, len(request.Selections))
+
+	for _, selection := range request.Selections {
+		absolute, _, identityErr := normalizeSourceIdentity(selection.File, projectRoot, options.FS)
+		if identityErr != nil {
+			return nil, identityErr
+		}
+		path := tspath.ToPath(absolute, projectRoot, options.FS.UseCaseSensitiveFileNames())
+		if len(allowedFiles) != 0 {
+			if _, ok := allowedFiles[path]; !ok {
+				return nil, fmt.Errorf("selection file %q is not present in files", selection.File)
+			}
+		}
+		file := program.GetSourceFile(absolute)
+		if file == nil {
+			return nil, fmt.Errorf("selection file %q is not part of project %q", selection.File, request.Project)
+		}
+		entry := selected[file.Path()]
+		if entry == nil {
+			_, id, canonicalIdentityErr := normalizeSourceIdentity(file.FileName(), projectRoot, options.FS)
+			if canonicalIdentityErr != nil {
+				return nil, canonicalIdentityErr
+			}
+			entry = &selectedFile{file: file, id: id}
+			selected[file.Path()] = entry
+		}
+		resolvedSelections = append(resolvedSelections, struct {
+			selection Selection
+			selected  *selectedFile
+		}{selection: selection, selected: entry})
+	}
+
+	diagnosticCount := 0
+	for _, entry := range selected {
+		entry.diagnosticCount = len(program.GetSyntacticDiagnostics(ctx, entry.file)) + len(program.GetSemanticDiagnostics(ctx, entry.file))
+		diagnosticCount += entry.diagnosticCount
+	}
+
+	c, done := program.GetTypeChecker(ctx)
+	defer done()
+	interner := newTypeInterner(c)
+	facts := make([]FactRecord, 0, len(resolvedSelections))
+	for _, resolved := range resolvedSelections {
+		fact, factErr := analyzeSelection(c, interner, resolved.selected, resolved.selection)
+		if factErr != nil {
+			return nil, factErr
+		}
+		facts = append(facts, fact)
+	}
+
+	files := make([]FileRecord, 0, len(selected))
+	for _, entry := range selected {
+		files = append(files, FileRecord{
+			Record:          "file",
+			ID:              entry.id,
+			DiagnosticCount: entry.diagnosticCount,
+		})
+	}
+	sort.Slice(files, func(left, right int) bool { return files[left].ID < files[right].ID })
+
+	projectID, projectIdentityErr := projectIdentity(projectPath, currentDirectory, options.FS)
+	if projectIdentityErr != nil {
+		return nil, projectIdentityErr
+	}
+	return &Result{
+		Header: HeaderRecord{
+			Record:             "header",
+			SchemaVersion:      SchemaVersion,
+			TypeScriptVersion:  core.Version(),
+			TypeScriptRevision: UpstreamRevision,
+			OffsetEncoding:     OffsetEncoding,
+			Project:            projectID,
+			CompilerOptions:    parsed.CompilerOptions(),
+			DiagnosticCount:    diagnosticCount,
+		},
+		Files: files,
+		Types: interner.types,
+		Facts: facts,
+	}, nil
+}
+
+func validateRequest(request Request) error {
+	if request.SchemaVersion != SchemaVersion {
+		return fmt.Errorf("unsupported schemaVersion %d; expected %d", request.SchemaVersion, SchemaVersion)
+	}
+	if request.Project == "" {
+		return errors.New("project is required")
+	}
+	if len(request.Selections) == 0 {
+		return errors.New("at least one selection is required")
+	}
+	for index, selection := range request.Selections {
+		if selection.File == "" {
+			return fmt.Errorf("selections[%d].file is required", index)
+		}
+		if selection.Start < 0 || selection.End < selection.Start {
+			return fmt.Errorf("selections[%d] has invalid span [%d, %d)", index, selection.Start, selection.End)
+		}
+	}
+	return nil
+}
+
+func normalizeAllowedFiles(files []string, projectRoot string, fs vfs.FS) (map[tspath.Path]struct{}, error) {
+	if len(files) == 0 {
+		return nil, nil
+	}
+	result := make(map[tspath.Path]struct{}, len(files))
+	for _, file := range files {
+		absolute, _, err := normalizeSourceIdentity(file, projectRoot, fs)
+		if err != nil {
+			return nil, err
+		}
+		result[tspath.ToPath(absolute, projectRoot, fs.UseCaseSensitiveFileNames())] = struct{}{}
+	}
+	return result, nil
+}
+
+func normalizeSourceIdentity(fileName string, projectRoot string, fs vfs.FS) (string, string, error) {
+	absolute := tspath.GetNormalizedAbsolutePath(fileName, projectRoot)
+	compareOptions := tspath.ComparePathsOptions{
+		CurrentDirectory:          projectRoot,
+		UseCaseSensitiveFileNames: fs.UseCaseSensitiveFileNames(),
+	}
+	if !tspath.ContainsPath(projectRoot, absolute, compareOptions) {
+		return "", "", fmt.Errorf("source file %q is outside project root", fileName)
+	}
+	id := tspath.GetRelativePathFromDirectory(projectRoot, absolute, compareOptions)
+	if id == "" || id == "." || strings.HasPrefix(id, "../") {
+		return "", "", fmt.Errorf("source file %q does not identify a project file", fileName)
+	}
+	return absolute, tspath.NormalizeSlashes(id), nil
+}
+
+func projectIdentity(projectPath string, currentDirectory string, fs vfs.FS) (string, error) {
+	compareOptions := tspath.ComparePathsOptions{
+		CurrentDirectory:          currentDirectory,
+		UseCaseSensitiveFileNames: fs.UseCaseSensitiveFileNames(),
+	}
+	id := tspath.GetRelativePathFromDirectory(currentDirectory, projectPath, compareOptions)
+	if id == "" {
+		return "", errors.New("project path cannot resolve to the current directory")
+	}
+	return tspath.NormalizeSlashes(id), nil
+}
+
+func analyzeSelection(c *checker.Checker, interner *typeInterner, selected *selectedFile, selection Selection) (FactRecord, error) {
+	textLength := len(selected.file.Text())
+	if selection.End > textLength {
+		return FactRecord{}, fmt.Errorf("selection [%d, %d) exceeds %q length %d", selection.Start, selection.End, selection.File, textLength)
+	}
+	node := astnav.GetTouchingToken(selected.file, selection.Start)
+	if node == nil || node.Kind == ast.KindEndOfFile {
+		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q does not identify a source token", selection.Start, selection.End, selection.File)
+	}
+	start := astnav.GetStartOfNode(node, selected.file, false)
+	if selection.Start < start || selection.End > node.End() || selection.Start == selection.End && selection.Start == node.End() {
+		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q must fit inside one token", selection.Start, selection.End, selection.File)
+	}
+
+	narrowed := c.GetTypeAtLocation(node)
+	if narrowed == nil {
+		return FactRecord{}, fmt.Errorf("selection [%d, %d) in %q has no semantic type", selection.Start, selection.End, selection.File)
+	}
+	fact := FactRecord{
+		Record:         "fact",
+		File:           selected.id,
+		Span:           Span{Start: start, End: node.End()},
+		SyntaxKind:     node.Kind.String(),
+		TypeAtLocation: interner.intern(narrowed),
+		Recovered:      selected.diagnosticCount != 0,
+	}
+	if ast.IsExpression(node) {
+		contextual := c.GetContextualType(node, checker.ContextFlagsNone)
+		if contextual != nil && contextual != narrowed {
+			fact.ContextualType = interner.intern(contextual)
+		}
+	}
+	if widened := c.GetWidenedType(narrowed); widened != nil && widened != narrowed {
+		fact.WidenedType = interner.intern(widened)
+	}
+	if constraint := c.GetBaseConstraintOfType(narrowed); constraint != nil && constraint != narrowed {
+		fact.ConstraintType = interner.intern(constraint)
+	}
+
+	fact.Truncated = !interner.complete(fact.TypeAtLocation) ||
+		!interner.complete(fact.ContextualType) ||
+		!interner.complete(fact.WidenedType) ||
+		!interner.complete(fact.ConstraintType)
+	fact.Complete = !fact.Recovered && !fact.Truncated
+	return fact, nil
+}
