@@ -41,6 +41,20 @@ func TestValidateResultRejectsUnknownVariant(t *testing.T) {
 	assert.ErrorContains(t, err, `unknown typeKind "future-magic"`)
 }
 
+func TestValidateResultRejectsInvalidTupleShape(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Types[0].TypeKind = "tuple"
+	result.Types[0].Target = "type:1"
+	result.Types[0].TypeArguments = []tsfacts.TypeID{"type:2"}
+	result.Types[0].Tuple = &tsfacts.TupleTypeDetails{
+		Elements: []tsfacts.TupleElementDetails{{Kind: "future-element"}},
+	}
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `element 0 has unknown kind "future-element"`)
+}
+
 func TestValidateResultRejectsDuplicateIdentity(t *testing.T) {
 	t.Parallel()
 	result := cyclicGraphResult()

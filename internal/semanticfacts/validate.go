@@ -8,10 +8,11 @@ import (
 )
 
 var knownTypeKinds = map[string]struct{}{
-	"any": {}, "bigint": {}, "boolean": {}, "callable": {}, "error": {},
+	"any": {}, "array": {}, "bigint": {}, "boolean": {}, "callable": {}, "error": {},
 	"intersection": {}, "literal": {}, "never": {}, "null": {}, "number": {},
-	"object": {}, "opaque": {}, "string": {}, "symbol": {}, "truncated": {}, "unsupported": {},
-	"type_parameter": {}, "undefined": {}, "union": {}, "unknown": {}, "void": {},
+	"non_primitive": {}, "object": {}, "opaque": {}, "reference": {}, "string": {}, "symbol": {},
+	"this": {}, "truncated": {}, "tuple": {}, "type_parameter": {}, "undefined": {},
+	"union": {}, "unique_symbol": {}, "unknown": {}, "unsupported": {}, "void": {},
 }
 
 var knownSignatureKinds = map[string]struct{}{
@@ -67,6 +68,9 @@ func ValidateResult(result *Result) error {
 			return fmt.Errorf("type %q has unknown typeKind %q", record.ID, record.TypeKind)
 		}
 		if err := validateEntityState("type", string(record.ID), record.State, record.Issues, record.Complete, record.Truncated); err != nil {
+			return err
+		}
+		if err := validateTypeShape(record); err != nil {
 			return err
 		}
 	}
@@ -292,6 +296,44 @@ func ValidateResult(result *Result) error {
 			if err := requireCompleteSymbols(symbols, owner, []SymbolID{fact.Symbol}); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func validateTypeShape(record TypeRecord) error {
+	if record.Array != nil && record.TypeKind != "array" {
+		return fmt.Errorf("type %q has array details for typeKind %q", record.ID, record.TypeKind)
+	}
+	if record.Tuple != nil && record.TypeKind != "tuple" {
+		return fmt.Errorf("type %q has tuple details for typeKind %q", record.ID, record.TypeKind)
+	}
+	switch record.TypeKind {
+	case "array":
+		if record.Array == nil {
+			return fmt.Errorf("array type %q requires array details", record.ID)
+		}
+		if record.Target == "" || len(record.TypeArguments) != 1 {
+			return fmt.Errorf("array type %q requires a target and one type argument", record.ID)
+		}
+	case "tuple":
+		if record.Tuple == nil {
+			return fmt.Errorf("tuple type %q requires tuple details", record.ID)
+		}
+		if record.Target == "" {
+			return fmt.Errorf("tuple type %q requires a target", record.ID)
+		}
+		if len(record.Tuple.Elements) != len(record.TypeArguments) {
+			return fmt.Errorf("tuple type %q has %d element details for %d type arguments", record.ID, len(record.Tuple.Elements), len(record.TypeArguments))
+		}
+		for index, element := range record.Tuple.Elements {
+			if element.Kind != "required" && element.Kind != "optional" && element.Kind != "rest" && element.Kind != "variadic" {
+				return fmt.Errorf("tuple type %q element %d has unknown kind %q", record.ID, index, element.Kind)
+			}
+		}
+	case "reference":
+		if record.Target == "" {
+			return fmt.Errorf("reference type %q requires a target", record.ID)
 		}
 	}
 	return nil
