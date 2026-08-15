@@ -69,6 +69,177 @@ const choice = Choice.Yes;
 	assert.Equal(t, enum.Literal.Kind, "enum")
 }
 
+func TestAnalyzeDistinguishesAnnotatedInferredAndNarrowedTypes(t *testing.T) {
+	t.Parallel()
+	const source = `
+declare const condition: boolean;
+let annotated: string | number = condition ? "text" : 1;
+annotated;
+let inferred = condition ? "text" : 1;
+inferred;
+if (typeof annotated === "string") {
+    annotated;
+}
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections: []tsfacts.Selection{
+			selectionAt(source, "annotated", 1),
+			selectionAt(source, "inferred", 1),
+			selectionAt(source, "annotated", 3),
+		},
+	})
+
+	annotated := result.Facts[0]
+	assert.Assert(t, annotated.AnnotationType != "")
+	assert.Equal(t, annotated.InferredType, tsfacts.TypeID(""))
+	assert.Equal(t, annotated.NarrowedType, tsfacts.TypeID(""))
+	assert.Equal(t, annotated.TypeAtLocation, annotated.AnnotationType)
+	assert.Equal(t, typeByID(t, result, annotated.AnnotationType).TypeKind, "union")
+
+	inferred := result.Facts[1]
+	assert.Equal(t, inferred.AnnotationType, tsfacts.TypeID(""))
+	assert.Assert(t, inferred.InferredType != "")
+	assert.Equal(t, inferred.NarrowedType, tsfacts.TypeID(""))
+	assert.Equal(t, inferred.TypeAtLocation, inferred.InferredType)
+	assert.Equal(t, typeByID(t, result, inferred.InferredType).TypeKind, "union")
+
+	narrowed := result.Facts[2]
+	assert.Assert(t, narrowed.AnnotationType != "")
+	assert.Equal(t, narrowed.InferredType, tsfacts.TypeID(""))
+	assert.Assert(t, narrowed.NarrowedType != "")
+	assert.Equal(t, narrowed.TypeAtLocation, narrowed.NarrowedType)
+	assert.Equal(t, typeByID(t, result, narrowed.AnnotationType).TypeKind, "union")
+	assert.Equal(t, typeByID(t, result, narrowed.NarrowedType).TypeKind, "string")
+}
+
+func TestAnalyzeDoesNotMisclassifyContainingAnnotations(t *testing.T) {
+	t.Parallel()
+	const source = `
+const { text }: { text: string } = { text: "value" };
+text;
+function parse(): string { return text; }
+parse;
+class Box {}
+declare let box: Box;
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections: []tsfacts.Selection{
+			selectionAt(source, "text", 3),
+			selectionAt(source, "parse", 1),
+			selectionAt(source, "Box", 1),
+		},
+	})
+
+	destructured := result.Facts[0]
+	assert.Equal(t, destructured.AnnotationType, tsfacts.TypeID(""))
+	assert.Assert(t, destructured.InferredType != "")
+	assert.Equal(t, typeByID(t, result, destructured.InferredType).TypeKind, "string")
+
+	function := result.Facts[1]
+	assert.Equal(t, function.AnnotationType, tsfacts.TypeID(""))
+	assert.Assert(t, function.InferredType != "")
+	assert.Equal(t, typeByID(t, result, function.InferredType).TypeKind, "callable")
+
+	typePosition := result.Facts[2]
+	assert.Equal(t, typePosition.AnnotationType, tsfacts.TypeID(""))
+	assert.Equal(t, typePosition.InferredType, tsfacts.TypeID(""))
+	assert.Equal(t, typePosition.NarrowedType, tsfacts.TypeID(""))
+}
+
+func TestAnalyzeUsesDeclaredTypeAsNarrowingBaseline(t *testing.T) {
+	t.Parallel()
+	const source = `
+function consume(value?: string) {
+    value;
+    if (value) {
+        value;
+    }
+}
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections: []tsfacts.Selection{
+			selectionAt(source, "value", 1),
+			selectionAt(source, "value", 3),
+		},
+	})
+
+	declared := result.Facts[0]
+	assert.Assert(t, declared.AnnotationType != "")
+	assert.Equal(t, typeByID(t, result, declared.AnnotationType).TypeKind, "string")
+	assert.Equal(t, typeByID(t, result, declared.TypeAtLocation).TypeKind, "union")
+	assert.Equal(t, declared.NarrowedType, tsfacts.TypeID(""))
+
+	narrowed := result.Facts[1]
+	assert.Equal(t, narrowed.AnnotationType, declared.AnnotationType)
+	assert.Assert(t, narrowed.NarrowedType != "")
+	assert.Equal(t, narrowed.TypeAtLocation, narrowed.NarrowedType)
+	assert.Equal(t, typeByID(t, result, narrowed.NarrowedType).TypeKind, "string")
+}
+
+func TestAnalyzeDoesNotMisclassifyGenericInstantiationAsNarrowing(t *testing.T) {
+	t.Parallel()
+	const source = `
+interface Box<T> { value: T }
+declare const box: Box<string>;
+box.value;
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	fact := result.Facts[0]
+	assert.Equal(t, typeByID(t, result, fact.TypeAtLocation).TypeKind, "string")
+	assert.Equal(t, fact.NarrowedType, tsfacts.TypeID(""))
+}
+
+func TestAnalyzeMarksPropertyOfNarrowedReceiver(t *testing.T) {
+	t.Parallel()
+	const source = `
+type Entity =
+    | { kind: "text"; value: string }
+    | { kind: "count"; value: number };
+declare const entity: Entity;
+if (entity.kind === "text") {
+    entity.value;
+}
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 2)},
+	})
+
+	fact := result.Facts[0]
+	assert.Equal(t, typeByID(t, result, fact.TypeAtLocation).TypeKind, "string")
+	assert.Assert(t, fact.NarrowedType != "")
+	assert.Equal(t, fact.TypeAtLocation, fact.NarrowedType)
+}
+
+func TestAnalyzeHandlesQualifiedTypeQuery(t *testing.T) {
+	t.Parallel()
+	const source = `
+namespace Values { export const value = "text" as const; }
+type Value = typeof Values.value;
+`
+	result := analyzeFixture(t, source, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Selections:    []tsfacts.Selection{selectionAt(source, "value", 1)},
+	})
+
+	fact := result.Facts[0]
+	assert.Equal(t, typeByID(t, result, fact.TypeAtLocation).TypeKind, "literal")
+	assert.Equal(t, fact.NarrowedType, tsfacts.TypeID(""))
+}
+
 func TestAnalyzeEmitsSymbolAndDeclarationProvenance(t *testing.T) {
 	t.Parallel()
 	const source = `

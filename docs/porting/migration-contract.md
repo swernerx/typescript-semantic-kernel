@@ -27,6 +27,9 @@ Schema v1 currently guarantees:
 - deterministic record ordering for an identical request and source tree;
 - explicit complete, recovered, and truncated state;
 - stable per-response type IDs that never reuse compiler-internal numeric IDs.
+- mutually exclusive annotation and inferred origin views for symbol-backed
+  value occurrences, plus explicit control-flow-narrowed views relative to
+  unflowed checker types for the selected symbol and property receiver;
 - response-local symbol and declaration handles with deterministic declaration
   ordering;
 - explicit alias-to-target edges without collapsing the local alias;
@@ -34,9 +37,9 @@ Schema v1 currently guarantees:
   installation paths.
 
 The initial slice does not guarantee complete structural serialization of every
-TypeScript type, annotation/inference separation, declarations outside the
-project root or TypeScript default libraries, project references, or an OXC
-bridge. Those are migration queue items, not implicit passes.
+TypeScript type, inference traces, declarations outside the project root or
+TypeScript default libraries, project references, or an OXC bridge. Those are
+migration queue items, not implicit passes.
 
 ## Equivalence oracle
 
@@ -48,8 +51,9 @@ shared by alternate backends.
 ## Gate ladder
 
 1. Focused `internal/tsfacts` tests pass, including non-ASCII spans,
-   deterministic output, recovery, narrowing, contextual typing, bounded type
-   serialization, aliases, merged declarations, and declaration file identity.
+   deterministic output, recovery, annotation/inference provenance, narrowing
+   baselines, contextual typing, bounded type serialization, aliases, merged
+   declarations, and declaration file identity.
 2. `go test ./internal/tsfacts ./cmd/tsfacts` passes.
 3. The new command builds through the repository-native build graph.
 4. The complete repository test suite passes without reduced test counts.
