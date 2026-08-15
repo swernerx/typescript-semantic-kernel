@@ -230,6 +230,20 @@ function buildTsgo(opts) {
     return $({ cancelSignal: opts.abortSignal, env })`go build ${goBuildFlags} ${opts.extraFlags ?? []} ${goBuildTags("noembed")} -o ${out} ./cmd/tsgo`;
 }
 
+/**
+ * @param {object} [opts]
+ * @param {string} [opts.out]
+ * @param {AbortSignal} [opts.abortSignal]
+ * @param {Record<string, string | undefined>} [opts.env]
+ * @param {string[]} [opts.extraFlags]
+ */
+function buildTsfacts(opts) {
+    opts ||= {};
+    const out = opts.out ?? "./built/local/";
+    const env = { ...goBuildEnv, ...opts.env };
+    return $({ cancelSignal: opts.abortSignal, env })`go build ${goBuildFlags} ${opts.extraFlags ?? []} ${goBuildTags("noembed")} -o ${out} ./cmd/tsfacts`;
+}
+
 export const tsgoBuild = task({
     name: "tsgo:build",
     description: "Builds the tsgo binary.",
@@ -243,9 +257,22 @@ export const tsgo = task({
     dependencies: [lib, tsgoBuild],
 });
 
+export const tsfactsBuild = task({
+    name: "tsfacts:build",
+    description: "Builds the tsfacts binary.",
+    run: async () => {
+        await buildTsfacts({ extraFlags: options.release ? getReleaseBuildFlags() : [] });
+    },
+});
+
+export const tsfacts = task({
+    name: "tsfacts",
+    dependencies: [lib, tsfactsBuild],
+});
+
 export const local = task({
     name: "local",
-    dependencies: [tsgo],
+    dependencies: [tsgo, tsfacts],
 });
 
 export const build = task({
@@ -285,8 +312,8 @@ export const buildWatch = task({
             }
 
             if (goChanged) {
-                console.log("Building tsgo...");
-                await buildTsgo({ abortSignal });
+                console.log("Building Go commands...");
+                await Promise.all([buildTsgo({ abortSignal }), buildTsfacts({ abortSignal })]);
             }
         }, {
             paths: ["cmd", "internal"],

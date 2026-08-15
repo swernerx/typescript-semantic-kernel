@@ -5,6 +5,11 @@
 > stable interface for attaching TypeScript semantic facts to source code. See
 > [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
 
+The first Phase 0 slice is the experimental [`tsfacts`](docs/tsfacts-protocol.md)
+JSON Lines command. Its compatibility boundary and current exclusions are
+tracked in the [migration contract](docs/porting/migration-contract.md), and
+durable implementation choices are recorded in [ADRs](docs/adr/README.md).
+
 # TypeScript 7
 
 [Not sure what this is? Read the announcement post!](https://devblogs.microsoft.com/typescript/typescript-native-port/)
