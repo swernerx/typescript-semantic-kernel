@@ -115,6 +115,28 @@ func ValidateResult(result *Result) error {
 		if record.ReturnType == "" {
 			return fmt.Errorf("signature %q requires returnType", record.ID)
 		}
+		if record.MinArgumentCount < 0 || record.SignatureKind != "index" && record.MinArgumentCount > len(record.Parameters) {
+			return fmt.Errorf("signature %q has minArgumentCount %d for %d parameters", record.ID, record.MinArgumentCount, len(record.Parameters))
+		}
+		if record.HasRestParameter && len(record.Parameters) == 0 {
+			return fmt.Errorf("signature %q has a rest parameter without parameters", record.ID)
+		}
+		if len(record.TypeArguments) != 0 && record.Target == "" {
+			return fmt.Errorf("signature %q has typeArguments without a target", record.ID)
+		}
+		if record.SignatureKind == "index" {
+			if record.IndexKeyType == "" {
+				return fmt.Errorf("index signature %q requires indexKeyType", record.ID)
+			}
+			if record.Target != "" || len(record.TypeArguments) != 0 || len(record.TypeParameters) != 0 || record.ThisType != "" || len(record.Parameters) != 0 || record.HasRestParameter {
+				return fmt.Errorf("index signature %q contains call or construct details", record.ID)
+			}
+			if record.MinArgumentCount != 1 {
+				return fmt.Errorf("index signature %q requires one argument", record.ID)
+			}
+		} else if record.IndexKeyType != "" || record.Readonly {
+			return fmt.Errorf("signature %q contains index-only details", record.ID)
+		}
 		if err := validateEntityState("signature", string(record.ID), record.State, record.Issues, record.Complete, record.Truncated); err != nil {
 			return err
 		}
@@ -220,8 +242,11 @@ func ValidateResult(result *Result) error {
 	}
 	for _, record := range result.Signatures {
 		owner := "signature " + string(record.ID)
-		typeEdges := appendTypeIDs(record.TypeParameters, record.ThisType, nil, record.ReturnType)
+		typeEdges := appendTypeIDs(record.TypeArguments, record.IndexKeyType, record.TypeParameters, record.ThisType, record.ReturnType)
 		if err := requireDeclarations(declarations, owner, []DeclarationID{record.Declaration}); err != nil {
+			return err
+		}
+		if err := requireSignatures(signatures, owner, []SignatureID{record.Target}); err != nil {
 			return err
 		}
 		if err := requireTypes(types, owner, typeEdges); err != nil {
@@ -231,6 +256,9 @@ func ValidateResult(result *Result) error {
 			return err
 		}
 		if record.Complete {
+			if err := requireCompleteSignatures(signatures, owner, []SignatureID{record.Target}); err != nil {
+				return err
+			}
 			if err := requireCompleteTypes(types, owner, typeEdges); err != nil {
 				return err
 			}

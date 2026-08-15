@@ -13,7 +13,12 @@ type typeInterner struct {
 	checker          *checker.Checker
 	limits           BudgetLimits
 	coreComposite    bool
+	references       bool
+	signatureGraph   bool
+	symbols          *symbolInterner
+	signatures       *signatureInterner
 	byType           map[*checker.Type]TypeID
+	byID             map[TypeID]int
 	types            []TypeRecord
 	limitIDs         map[string]TypeID
 	typeNodesUsed    int
@@ -27,6 +32,7 @@ func newTypeInterner(c *checker.Checker, limits BudgetLimits, coreComposite bool
 		limits:        limits,
 		coreComposite: coreComposite,
 		byType:        make(map[*checker.Type]TypeID),
+		byID:          make(map[TypeID]int),
 		limitIDs:      make(map[string]TypeID),
 	}
 }
@@ -54,7 +60,13 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 
 	id := TypeID(fmt.Sprintf("type:%d", len(i.types)+1))
 	i.byType[t] = id
-	i.types = append(i.types, TypeRecord{Record: "type", ID: id})
+	i.byID[id] = len(i.types)
+	i.types = append(i.types, TypeRecord{
+		Record:   "type",
+		ID:       id,
+		State:    EntityStateComplete,
+		Complete: true,
+	})
 	i.typeNodesUsed++
 	index := len(i.types) - 1
 
@@ -126,23 +138,32 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 				i.markReferencedIncomplete(&record, record.Constraint)
 			}
 		case flags&checker.TypeFlagsObject != 0:
+			coreObjectShape := false
+			collectionShape := i.checker.IsArrayType(t) || checker.IsTupleType(t)
 			switch {
 			case i.coreComposite && i.checker.IsArrayType(t):
 				record.TypeKind = "array"
 				record.Array = &ArrayTypeDetails{Readonly: isReadonlyArray(t)}
 				i.internReferenceEdges(&record, t, depth)
+				coreObjectShape = true
 			case i.coreComposite && checker.IsTupleType(t):
 				record.TypeKind = "tuple"
 				i.internReferenceEdges(&record, t, depth)
 				record.Tuple = tupleDetails(t)
+				coreObjectShape = true
 			case i.coreComposite && t.ObjectFlags()&checker.ObjectFlagsReference != 0:
 				record.TypeKind = "reference"
 				i.internReferenceEdges(&record, t, depth)
+				coreObjectShape = true
 			default:
 				record.TypeKind = "object"
 				if structured := t.AsStructuredType(); structured != nil && len(structured.CallSignatures()) != 0 {
 					record.TypeKind = "callable"
 				}
+			}
+			if i.references && !collectionShape {
+				i.internObjectEdges(&record, t, depth)
+			} else if !coreObjectShape {
 				markTypeIncomplete(&record, EntityStateTruncated, GraphIssue{Code: GraphIssueUnsupportedStructure})
 			}
 		default:
@@ -153,6 +174,40 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 
 	i.types[index] = record
 	return id
+}
+
+func (i *typeInterner) internObjectEdges(record *TypeRecord, t *checker.Type, depth int) {
+	nextDepth := depth + 1
+	record.Symbol = i.symbols.internAtDepth(t.Symbol(), nextDepth)
+	properties := slices.Clone(i.checker.GetPropertiesOfType(t))
+	slices.SortStableFunc(properties, func(left, right *ast.Symbol) int {
+		return cmp.Compare(ast.EscapeSymbolName(ast.SymbolName(left)), ast.EscapeSymbolName(ast.SymbolName(right)))
+	})
+	for _, property := range properties {
+		record.Properties = append(record.Properties, i.symbols.internAtDepth(property, nextDepth))
+	}
+
+	callSignatures := i.checker.GetSignaturesOfType(t, checker.SignatureKindCall)
+	constructSignatures := i.checker.GetSignaturesOfType(t, checker.SignatureKindConstruct)
+	indexSignatures := slices.Clone(i.checker.GetIndexInfosOfType(t))
+	slices.SortStableFunc(indexSignatures, func(left, right *checker.IndexInfo) int {
+		return cmp.Compare(i.checker.TypeToString(left.KeyType()), i.checker.TypeToString(right.KeyType()))
+	})
+	if !i.signatureGraph {
+		if len(callSignatures) != 0 || len(constructSignatures) != 0 || len(indexSignatures) != 0 {
+			markTypeIncomplete(record, EntityStateTruncated, GraphIssue{Code: GraphIssueUnsupportedStructure})
+		}
+		return
+	}
+	for _, signature := range callSignatures {
+		record.CallSignatures = append(record.CallSignatures, i.signatures.intern(signature, "call", nextDepth))
+	}
+	for _, signature := range constructSignatures {
+		record.ConstructSignatures = append(record.ConstructSignatures, i.signatures.intern(signature, "construct", nextDepth))
+	}
+	for _, signature := range indexSignatures {
+		record.IndexSignatures = append(record.IndexSignatures, i.signatures.internIndex(signature, nextDepth))
+	}
 }
 
 func (i *typeInterner) compositeMembers(t *checker.Type) []*checker.Type {
@@ -302,6 +357,7 @@ func (i *typeInterner) internLimit(code string, limit int) TypeID {
 	id := TypeID(fmt.Sprintf("type:%d", len(i.types)+1))
 	i.limitIDs[code] = id
 	i.budgetTruncated = true
+	i.byID[id] = len(i.types)
 	i.types = append(i.types, TypeRecord{
 		Record:    "type",
 		ID:        id,
@@ -319,24 +375,16 @@ func (i *typeInterner) complete(id TypeID) bool {
 	if id == "" {
 		return true
 	}
-	for index := range i.types {
-		if i.types[index].ID == id {
-			return i.types[index].Complete
-		}
-	}
-	return false
+	index, ok := i.byID[id]
+	return ok && i.types[index].Complete
 }
 
 func (i *typeInterner) truncated(id TypeID) bool {
 	if id == "" {
 		return false
 	}
-	for index := range i.types {
-		if i.types[index].ID == id {
-			return i.types[index].State == EntityStateTruncated
-		}
-	}
-	return false
+	index, ok := i.byID[id]
+	return ok && i.types[index].State == EntityStateTruncated
 }
 
 func (i *typeInterner) budgetReport() BudgetReport {
@@ -350,7 +398,7 @@ func (i *typeInterner) budgetReport() BudgetReport {
 
 func markTypeIncomplete(record *TypeRecord, state string, issue GraphIssue) {
 	record.State = state
-	record.Issues = append(record.Issues, issue)
+	record.Issues = appendGraphIssue(record.Issues, issue.Code)
 	record.Complete = false
 	record.Truncated = state == EntityStateTruncated
 }

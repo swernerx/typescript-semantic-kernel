@@ -150,18 +150,24 @@ type SymbolRecord struct {
 }
 
 type SignatureRecord struct {
-	Record         string        `json:"record"`
-	ID             SignatureID   `json:"id"`
-	SignatureKind  string        `json:"signatureKind"`
-	Declaration    DeclarationID `json:"declaration,omitzero"`
-	TypeParameters []TypeID      `json:"typeParameters,omitzero"`
-	ThisType       TypeID        `json:"thisType,omitzero"`
-	Parameters     []SymbolID    `json:"parameters,omitzero"`
-	ReturnType     TypeID        `json:"returnType"`
-	State          string        `json:"state"`
-	Issues         []GraphIssue  `json:"issues,omitzero"`
-	Complete       bool          `json:"complete"`
-	Truncated      bool          `json:"truncated"`
+	Record           string        `json:"record"`
+	ID               SignatureID   `json:"id"`
+	SignatureKind    string        `json:"signatureKind"`
+	Declaration      DeclarationID `json:"declaration,omitzero"`
+	Target           SignatureID   `json:"target,omitzero"`
+	TypeArguments    []TypeID      `json:"typeArguments,omitzero"`
+	TypeParameters   []TypeID      `json:"typeParameters,omitzero"`
+	ThisType         TypeID        `json:"thisType,omitzero"`
+	Parameters       []SymbolID    `json:"parameters,omitzero"`
+	MinArgumentCount int           `json:"minArgumentCount,omitzero"`
+	HasRestParameter bool          `json:"hasRestParameter,omitzero"`
+	IndexKeyType     TypeID        `json:"indexKeyType,omitzero"`
+	Readonly         bool          `json:"readonly,omitzero"`
+	ReturnType       TypeID        `json:"returnType"`
+	State            string        `json:"state"`
+	Issues           []GraphIssue  `json:"issues,omitzero"`
+	Complete         bool          `json:"complete"`
+	Truncated        bool          `json:"truncated"`
 }
 
 type TypeViewStates struct {

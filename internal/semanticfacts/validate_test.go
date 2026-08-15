@@ -55,6 +55,44 @@ func TestValidateResultRejectsInvalidTupleShape(t *testing.T) {
 	assert.ErrorContains(t, err, `element 0 has unknown kind "future-element"`)
 }
 
+func TestValidateResultRejectsIndexSignatureWithoutKeyType(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Signatures[0].SignatureKind = "index"
+	result.Signatures[0].TypeParameters = nil
+	result.Signatures[0].MinArgumentCount = 1
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `index signature "signature:1" requires indexKeyType`)
+}
+
+func TestValidateResultRejectsDanglingSignatureTarget(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Signatures[0].Target = "signature:999"
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `signature signature:1 references missing signature "signature:999"`)
+}
+
+func TestValidateResultRejectsInvalidSignatureArity(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Signatures[0].MinArgumentCount = 2
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `signature "signature:1" has minArgumentCount 2 for 1 parameters`)
+}
+
+func TestValidateResultRejectsSignatureArgumentsWithoutTarget(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Signatures[0].TypeArguments = []tsfacts.TypeID{"type:1"}
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `signature "signature:1" has typeArguments without a target`)
+}
+
 func TestValidateResultRejectsDuplicateIdentity(t *testing.T) {
 	t.Parallel()
 	result := cyclicGraphResult()

@@ -3,6 +3,7 @@ package semanticfacts
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/microsoft/typescript-go/internal/ast"
 	"github.com/microsoft/typescript-go/internal/astnav"
@@ -80,22 +81,31 @@ type declarationCandidate struct {
 type symbolInterner struct {
 	checker       *checker.Checker
 	files         *fileRegistry
+	references    bool
+	types         *typeInterner
 	bySymbol      map[*ast.Symbol]SymbolID
+	byID          map[SymbolID]int
 	byDeclaration map[*ast.Node]DeclarationID
 	symbols       []SymbolRecord
 	declarations  []DeclarationRecord
 }
 
-func newSymbolInterner(c *checker.Checker, files *fileRegistry) *symbolInterner {
+func newSymbolInterner(c *checker.Checker, files *fileRegistry, references bool) *symbolInterner {
 	return &symbolInterner{
 		checker:       c,
 		files:         files,
+		references:    references,
 		bySymbol:      make(map[*ast.Symbol]SymbolID),
+		byID:          make(map[SymbolID]int),
 		byDeclaration: make(map[*ast.Node]DeclarationID),
 	}
 }
 
 func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
+	return i.internAtDepth(symbol, 0)
+}
+
+func (i *symbolInterner) internAtDepth(symbol *ast.Symbol, depth int) SymbolID {
 	if symbol == nil || symbol == i.checker.GetUnknownSymbol() {
 		return ""
 	}
@@ -105,7 +115,13 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 
 	id := SymbolID(fmt.Sprintf("symbol:%d", len(i.symbols)+1))
 	i.bySymbol[symbol] = id
-	i.symbols = append(i.symbols, SymbolRecord{Record: "symbol", ID: id})
+	i.byID[id] = len(i.symbols)
+	i.symbols = append(i.symbols, SymbolRecord{
+		Record:   "symbol",
+		ID:       id,
+		State:    EntityStateComplete,
+		Complete: true,
+	})
 	index := len(i.symbols) - 1
 
 	candidates := make([]declarationCandidate, 0, len(symbol.Declarations))
@@ -147,10 +163,49 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 			complete = false
 			issues = appendGraphIssue(issues, GraphIssueUnresolvedAlias)
 		} else {
-			aliasedSymbol = i.intern(aliased)
+			aliasedSymbol = i.internAtDepth(aliased, depth)
 			if !i.complete(aliasedSymbol) {
 				complete = false
 				issues = appendGraphIssue(issues, GraphIssueReferencedAlias)
+			}
+		}
+	}
+
+	var symbolType TypeID
+	var declaredType TypeID
+	var members []SymbolID
+	if i.references && symbol.Flags&ast.SymbolFlagsAlias == 0 {
+		if symbol.Flags&ast.SymbolFlagsValue != 0 {
+			symbolType = i.types.internAtDepth(i.checker.GetTypeOfSymbol(symbol), depth)
+			if !i.types.complete(symbolType) {
+				complete = false
+				issues = appendGraphIssue(issues, GraphIssueReferencedIncompleteType)
+			}
+		}
+		if symbol.Flags&ast.SymbolFlagsType != 0 {
+			declaredType = i.types.internAtDepth(i.checker.GetDeclaredTypeOfSymbol(symbol), depth)
+			if !i.types.complete(declaredType) {
+				complete = false
+				issues = appendGraphIssue(issues, GraphIssueReferencedIncompleteType)
+			}
+		}
+		memberSymbols := make([]*ast.Symbol, 0, len(symbol.Members))
+		for name, member := range symbol.Members {
+			if !strings.HasPrefix(name, ast.InternalSymbolNamePrefix) {
+				memberSymbols = append(memberSymbols, member)
+			}
+		}
+		sort.SliceStable(memberSymbols, func(left, right int) bool {
+			leftName := ast.EscapeSymbolName(ast.SymbolName(memberSymbols[left]))
+			rightName := ast.EscapeSymbolName(ast.SymbolName(memberSymbols[right]))
+			return leftName < rightName
+		})
+		for _, member := range memberSymbols {
+			memberID := i.internAtDepth(member, depth)
+			members = append(members, memberID)
+			if !i.complete(memberID) {
+				complete = false
+				issues = appendGraphIssue(issues, GraphIssueReferencedIncompleteSymbol)
 			}
 		}
 	}
@@ -166,12 +221,22 @@ func (i *symbolInterner) intern(symbol *ast.Symbol) SymbolID {
 		Roles:         symbolRoles(symbol.Flags),
 		Declarations:  declarations,
 		AliasedSymbol: aliasedSymbol,
+		Type:          symbolType,
+		DeclaredType:  declaredType,
+		Members:       members,
 		State:         state,
 		Issues:        issues,
 		Complete:      complete,
 		Truncated:     !complete,
 	}
 	return id
+}
+
+func markSymbolIncomplete(record *SymbolRecord, code string) {
+	record.State = EntityStateTruncated
+	record.Issues = appendGraphIssue(record.Issues, code)
+	record.Complete = false
+	record.Truncated = true
 }
 
 func appendGraphIssue(issues []GraphIssue, code string) []GraphIssue {
@@ -223,37 +288,36 @@ func (i *symbolInterner) internDeclaration(candidate declarationCandidate) Decla
 	return id
 }
 
+func (i *symbolInterner) internDeclarationNode(node *ast.Node) (DeclarationID, bool) {
+	candidate, ok := i.declarationCandidate(node)
+	if !ok {
+		return "", false
+	}
+	return i.internDeclaration(candidate), true
+}
+
 func (i *symbolInterner) complete(id SymbolID) bool {
 	if id == "" {
 		return true
 	}
-	for index := range i.symbols {
-		if i.symbols[index].ID == id {
-			return i.symbols[index].Complete
-		}
-	}
-	return false
+	index, ok := i.byID[id]
+	return ok && i.symbols[index].Complete
 }
 
 func (i *symbolInterner) truncated(id SymbolID) bool {
 	if id == "" {
 		return false
 	}
-	for index := range i.symbols {
-		if i.symbols[index].ID == id {
-			return i.symbols[index].State == EntityStateTruncated
-		}
-	}
-	return false
+	index, ok := i.byID[id]
+	return ok && i.symbols[index].State == EntityStateTruncated
 }
 
 func (i *symbolInterner) declarationsOf(id SymbolID) []DeclarationID {
-	for index := range i.symbols {
-		if i.symbols[index].ID == id {
-			return i.symbols[index].Declarations
-		}
+	index, ok := i.byID[id]
+	if !ok {
+		return nil
 	}
-	return nil
+	return i.symbols[index].Declarations
 }
 
 func symbolRoles(flags ast.SymbolFlags) []string {

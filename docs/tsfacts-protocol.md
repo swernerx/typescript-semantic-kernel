@@ -41,7 +41,9 @@ passing zero, selects the schema-v1 defaults of 4096 type nodes and depth 32.
 Negative values are invalid. `occurrence.file-wide` advertises support for the
 file-wide scope. `types.core-composite` advertises protocol-native core and
 composite type variants; a request must require it before those new variants
-are emitted.
+are emitted. Requiring `graph.references` enables deep object, property, and
+symbol relationships. Requiring `graph.signatures` additionally enables
+callable traversal and implies the reference traversal needed by parameters.
 
 File-wide enumeration visits parser-owned identifiers, private identifiers,
 literals and template-literal tokens, keyword expressions, and keyword type
@@ -137,7 +139,10 @@ records contain a display name, stable protocol roles, all representable source
 declarations, and an `aliasedSymbol` edge for imports or exports. Aliases are
 not collapsed: a consumer can inspect both the local binding and the resolved
 target. Merged declarations are sorted by file and span before IDs are
-allocated.
+allocated. With `graph.references` required, type records link to their defining
+symbol and sorted property symbols. Symbols additionally link to their value
+type, declared type, and sorted non-internal members. Property symbols thereby
+retain both a `type` ID and their declaration locations.
 
 Schema-v1 symbol roles are `alias`, `variable`, `property`, `enum_member`,
 `function`, `class`, `interface`, `enum`, `module`, `method`, `constructor`,
@@ -172,14 +177,26 @@ Per-response IDs such as `type:1`, `symbol:1`, and `declaration:1` are
 deterministic handles only. They are not compiler-internal IDs and must not be
 persisted across requests. See [ADR-0002](adr/0002-use-response-local-symbol-and-declaration-ids.md).
 
-The graph contract additionally reserves response-local `signature:` handles
-and explicit cross-table edges. Types can reference members, symbols, generic
-targets and arguments, constraints, defaults, properties, and call, construct,
-or index signatures. Symbols can reference declarations, aliases, types, and
-members. Signatures reference their declaration, type parameters, `this` type,
-parameter symbols, and return type. The exporter allocates an ID before walking
-edges; forward references, sharing, self-cycles, and mutually recursive cycles
-are therefore valid and record order never implies ownership.
+The graph contract uses response-local `signature:` handles and explicit
+cross-table edges. With `graph.signatures` required, types reference ordered
+call and construct overloads plus normalized index signatures. Signatures
+reference their declaration, target signature, instantiated type arguments,
+type parameters, `this` type, ordered parameter symbols, and return type. Call
+and construct signatures also report `minArgumentCount` and
+`hasRestParameter`. Index signatures retain one-argument arity and use
+`indexKeyType`, `returnType` for the indexed value, and explicit `readonly`
+state. Types can also reference members, symbols, generic targets and arguments,
+constraints, defaults, and properties. Symbols can reference declarations,
+aliases, types, and members. Protocol-native arrays and tuples retain their
+bounded composite representation instead of expanding the standard library
+method surface.
+
+The exporter allocates an ID before walking edges, then finalizes completeness
+to a fixed point after collecting all roots. Forward references, sharing,
+self-cycles, and mutually recursive cycles are therefore valid and record order
+never implies ownership. Property and symbol-member discovery is normalized by
+escaped name; overloads retain checker order. See
+[ADR-0009](adr/0009-intern-object-symbol-and-signature-graphs-before-finalization.md).
 
 Every response is checked for unique namespaced IDs, resolvable edges, coherent
 completeness, and known type and signature variants before output begins. An
@@ -215,7 +232,8 @@ entity-state, type-kind, and signature-kind variants. New variants must be
 gated by a capability explicitly requested by the consumer; incompatible
 required fields or changed meanings require a new schema version. If
 `types.core-composite` is not requested, the producer retains the earlier
-truncated or unsupported fallback for its new variants.
+truncated or unsupported fallback for its new variants. If graph capabilities
+are not requested, it retains shallow symbol and object output.
 
 This spike intentionally omits inference traces, diagnostic payloads, project
 references, daemon reuse, symbol/signature budget counters, and the OXC bridge.

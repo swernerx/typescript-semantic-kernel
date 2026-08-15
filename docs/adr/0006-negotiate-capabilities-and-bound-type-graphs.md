@@ -70,9 +70,11 @@ capability without a schema bump, but it must gate a new semantic variant on a
 capability explicitly required by the request. An incompatible required field,
 changed meaning, or unconditional new variant requires a new schema version.
 
-The v0 budget report bounds the currently recursive type exporter. Symbol and
-signature counters require a new advertised capability before those exporters
-grow beyond their current shallow selection and alias traversal.
+The v0 budget report bounds checker-backed type traversal. Deep symbol and
+signature traversal remains opt-in through `graph.references` and
+`graph.signatures` as specified by ADR-0009. Independently bounded symbol and
+signature counters require a future additive capability before that traversal
+becomes default behavior.
 
 ## Considered options
 
@@ -106,7 +108,8 @@ consumer's analysis. Additive fields are safe to ignore; variants are not.
 - The duplicated state booleans are temporary schema-v1 compatibility fields
   and must remain validator-checked.
 - Adding symbol or signature budgets is an additive capability milestone, not
-  an undocumented change to the existing counters.
+  an undocumented change to the existing counters. Until then, deep traversal
+  remains explicitly negotiated.
 
 ## Validation and review triggers
 
@@ -123,5 +126,6 @@ consumer's analysis. Additive fields are safe to ignore; variants are not.
 
 - [RFC 0001](../../rfcs/0001-semantic-facts-kernel.md)
 - [ADR-0005](0005-use-response-local-referential-graph-tables.md)
+- [ADR-0009](0009-intern-object-symbol-and-signature-graphs-before-finalization.md)
 - [`tsfacts` protocol](../tsfacts-protocol.md)
 - [Canonical fixture corpus v0](../../internal/tsfacts/testdata/canonical/v0/)
