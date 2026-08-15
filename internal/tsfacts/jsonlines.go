@@ -5,10 +5,11 @@ import (
 	"io"
 
 	"github.com/microsoft/typescript-go/internal/json"
+	"github.com/microsoft/typescript-go/internal/semanticfacts"
 )
 
-func WriteJSONLines(writer io.Writer, result *Result) error {
-	if err := ValidateResult(result); err != nil {
+func WriteJSONLines(writer io.Writer, result *semanticfacts.Result) error {
+	if err := semanticfacts.ValidateResult(result); err != nil {
 		return fmt.Errorf("validate semantic graph: %w", err)
 	}
 	if err := writeJSONLine(writer, result.Header); err != nil {

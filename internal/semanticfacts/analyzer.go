@@ -1,9 +1,10 @@
-package tsfacts
+package semanticfacts
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/microsoft/typescript-go/internal/ast"
@@ -64,35 +65,55 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		selection Selection
 		selected  *selectedFile
 	}, 0, len(request.Selections))
-
-	for _, selection := range request.Selections {
-		absolute, _, identityErr := normalizeSourceIdentity(selection.File, projectRoot, options.FS)
+	resolveFile := func(fileName string) (*selectedFile, error) {
+		absolute, _, identityErr := normalizeSourceIdentity(fileName, projectRoot, options.FS)
 		if identityErr != nil {
 			return nil, identityErr
 		}
 		path := tspath.ToPath(absolute, projectRoot, options.FS.UseCaseSensitiveFileNames())
-		if len(allowedFiles) != 0 {
-			if _, ok := allowedFiles[path]; !ok {
-				return nil, fmt.Errorf("selection file %q is not present in files", selection.File)
-			}
+		if entry := selected[path]; entry != nil {
+			return entry, nil
 		}
 		file := program.GetSourceFile(absolute)
 		if file == nil {
-			return nil, fmt.Errorf("selection file %q is not part of project %q", selection.File, request.Project)
+			return nil, fmt.Errorf("source file %q is not part of project %q", fileName, request.Project)
 		}
-		entry := selected[file.Path()]
-		if entry == nil {
-			_, id, canonicalIdentityErr := normalizeSourceIdentity(file.FileName(), projectRoot, options.FS)
-			if canonicalIdentityErr != nil {
-				return nil, canonicalIdentityErr
+		_, id, canonicalIdentityErr := normalizeSourceIdentity(file.FileName(), projectRoot, options.FS)
+		if canonicalIdentityErr != nil {
+			return nil, canonicalIdentityErr
+		}
+		entry := &selectedFile{file: file, id: id}
+		selected[file.Path()] = entry
+		return entry, nil
+	}
+
+	if len(request.Selections) == 0 {
+		for _, fileName := range request.Files {
+			if _, resolveErr := resolveFile(fileName); resolveErr != nil {
+				return nil, resolveErr
 			}
-			entry = &selectedFile{file: file, id: id}
-			selected[file.Path()] = entry
 		}
-		resolvedSelections = append(resolvedSelections, struct {
-			selection Selection
-			selected  *selectedFile
-		}{selection: selection, selected: entry})
+	} else {
+		for _, selection := range request.Selections {
+			absolute, _, identityErr := normalizeSourceIdentity(selection.File, projectRoot, options.FS)
+			if identityErr != nil {
+				return nil, identityErr
+			}
+			path := tspath.ToPath(absolute, projectRoot, options.FS.UseCaseSensitiveFileNames())
+			if len(allowedFiles) != 0 {
+				if _, ok := allowedFiles[path]; !ok {
+					return nil, fmt.Errorf("selection file %q is not present in files", selection.File)
+				}
+			}
+			entry, resolveErr := resolveFile(selection.File)
+			if resolveErr != nil {
+				return nil, resolveErr
+			}
+			resolvedSelections = append(resolvedSelections, struct {
+				selection Selection
+				selected  *selectedFile
+			}{selection: selection, selected: entry})
+		}
 	}
 
 	diagnosticCount := 0
@@ -105,6 +126,21 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 
 	c, done := program.GetTypeChecker(ctx)
 	defer done()
+	if len(request.Selections) == 0 {
+		fileWideEntries := make([]*selectedFile, 0, len(selected))
+		for _, entry := range selected {
+			fileWideEntries = append(fileWideEntries, entry)
+		}
+		sort.Slice(fileWideEntries, func(left, right int) bool { return fileWideEntries[left].id < fileWideEntries[right].id })
+		for _, entry := range fileWideEntries {
+			for _, selection := range enumerateSemanticSelections(c, entry) {
+				resolvedSelections = append(resolvedSelections, struct {
+					selection Selection
+					selected  *selectedFile
+				}{selection: selection, selected: entry})
+			}
+		}
+	}
 	types := newTypeInterner(c, limits)
 	symbols := newSymbolInterner(c, files)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
@@ -154,8 +190,8 @@ func validateRequest(request Request) error {
 	if _, err := normalizeBudgetLimits(request.Budgets); err != nil {
 		return err
 	}
-	if len(request.Selections) == 0 {
-		return errors.New("at least one selection is required")
+	if len(request.Selections) == 0 && len(request.Files) == 0 {
+		return errors.New("at least one file or selection is required")
 	}
 	for index, selection := range request.Selections {
 		if selection.File == "" {
@@ -166,6 +202,57 @@ func validateRequest(request Request) error {
 		}
 	}
 	return nil
+}
+
+func enumerateSemanticSelections(c *checker.Checker, selected *selectedFile) []Selection {
+	type candidate struct {
+		start int
+		end   int
+		kind  ast.Kind
+	}
+	candidates := make([]candidate, 0, selected.file.IdentifierCount)
+	var visit func(*ast.Node)
+	visit = func(node *ast.Node) {
+		if node == nil || node.Flags&ast.NodeFlagsReparsed != 0 {
+			return
+		}
+		if isSemanticOccurrenceToken(node.Kind) && c.GetTypeAtLocation(node) != nil {
+			start := astnav.GetStartOfNode(node, selected.file, false)
+			if start < node.End() {
+				candidates = append(candidates, candidate{start: start, end: node.End(), kind: node.Kind})
+			}
+		}
+		for child := range node.IterChildren() {
+			visit(child)
+		}
+	}
+	visit(selected.file.AsNode())
+	sort.Slice(candidates, func(left, right int) bool {
+		if candidates[left].start != candidates[right].start {
+			return candidates[left].start < candidates[right].start
+		}
+		if candidates[left].end != candidates[right].end {
+			return candidates[left].end < candidates[right].end
+		}
+		return candidates[left].kind < candidates[right].kind
+	})
+	selections := make([]Selection, 0, len(candidates))
+	for index, occurrence := range candidates {
+		if index != 0 && occurrence == candidates[index-1] {
+			continue
+		}
+		selections = append(selections, Selection{File: selected.id, Start: occurrence.start, End: occurrence.end})
+	}
+	return selections
+}
+
+func isSemanticOccurrenceToken(kind ast.Kind) bool {
+	return kind == ast.KindIdentifier ||
+		kind == ast.KindPrivateIdentifier ||
+		ast.IsLiteralKind(kind) ||
+		ast.IsPseudoLiteralKind(kind) ||
+		ast.IsKeywordExpressionKind(kind) ||
+		ast.IsKeywordTypeKind(kind)
 }
 
 func normalizeAllowedFiles(files []string, projectRoot string, fs vfs.FS) (map[tspath.Path]struct{}, error) {

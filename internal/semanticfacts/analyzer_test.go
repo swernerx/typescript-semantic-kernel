@@ -1,4 +1,4 @@
-package tsfacts_test
+package semanticfacts_test
 
 import (
 	"bytes"
@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	"github.com/microsoft/typescript-go/internal/bundled"
-	"github.com/microsoft/typescript-go/internal/tsfacts"
+	tsfacts "github.com/microsoft/typescript-go/internal/semanticfacts"
+	transport "github.com/microsoft/typescript-go/internal/tsfacts"
 	"github.com/microsoft/typescript-go/internal/vfs/vfstest"
 	"gotest.tools/v3/assert"
 )
@@ -351,7 +352,7 @@ func TestAnalyzePreservesAliasAndTargetSymbols(t *testing.T) {
 	assert.Assert(t, !declarationFile.Selected)
 	assert.Assert(t, declarationFile.DiagnosticCount == nil)
 	var output bytes.Buffer
-	assert.NilError(t, tsfacts.WriteJSONLines(&output, result))
+	assert.NilError(t, transport.WriteJSONLines(&output, result))
 	declarationFileLine := lineContaining(t, strings.Split(output.String(), "\n"), `"id":"src/values.ts"`)
 	assert.Assert(t, strings.Contains(declarationFileLine, `"origin":"project"`))
 	assert.Assert(t, !strings.Contains(declarationFileLine, `"selected"`))
@@ -492,6 +493,88 @@ func TestAnalyzeMarksRecoveredFacts(t *testing.T) {
 	assert.Assert(t, !result.Facts[0].Complete)
 }
 
+func TestAnalyzeEnumeratesFileWideOccurrencesDeterministically(t *testing.T) {
+	t.Parallel()
+	const source = `const value: string = "hello"; value;`
+	request := tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Files:         []string{"src/example.ts"},
+	}
+	first := analyzeFixture(t, source, request)
+	second := analyzeFixture(t, source, request)
+
+	assert.Assert(t, len(first.Facts) >= 4)
+	for index, fact := range first.Facts {
+		assert.Equal(t, fact.File, "src/example.ts")
+		assert.Equal(t, fact.TypeViewStates.Actual, tsfacts.TypeViewAvailable)
+		assert.Assert(t, fact.TypeViewStates.Contextual != "")
+		assert.Assert(t, fact.TypeViewStates.Widened != "")
+		assert.Assert(t, fact.TypeViewStates.Apparent != "")
+		assert.Assert(t, fact.TypeViewStates.Declared != "")
+		if index != 0 {
+			assert.Assert(t, first.Facts[index-1].Span.Start < fact.Span.Start)
+		}
+	}
+	for _, selection := range []tsfacts.Selection{
+		selectionAt(source, "value", 0),
+		selectionAt(source, "string", 0),
+		selectionAt(source, `"hello"`, 0),
+		selectionAt(source, "value", 1),
+	} {
+		assert.Assert(t, factAtStart(first, selection.Start) != nil)
+	}
+	literal := factAtStart(first, selectionAt(source, `"hello"`, 0).Start)
+	assert.Equal(t, literal.TypeViewStates.Contextual, tsfacts.TypeViewAvailable)
+	assert.Assert(t, literal.ContextualType != "")
+	assert.Assert(t, literal.ContextualType != literal.ActualType)
+
+	var firstOutput bytes.Buffer
+	var secondOutput bytes.Buffer
+	assert.NilError(t, transport.WriteJSONLines(&firstOutput, first))
+	assert.NilError(t, transport.WriteJSONLines(&secondOutput, second))
+	assert.Equal(t, firstOutput.String(), secondOutput.String())
+}
+
+func TestAnalyzeOrdersFileWideOccurrencesByCanonicalFileID(t *testing.T) {
+	t.Parallel()
+	fs := vfstest.FromMap(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true,"noEmit":true},"files":["src/a.ts","src/z.ts"]}`,
+		"/project/src/a.ts":      `const alpha = 1;`,
+		"/project/src/z.ts":      `const zeta = 2;`,
+	}, true)
+	result, err := tsfacts.Analyze(t.Context(), tsfacts.AnalyzerOptions{
+		CurrentDirectory:   "/project",
+		FS:                 bundled.WrapFS(fs),
+		DefaultLibraryPath: bundled.LibPath(),
+	}, tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+		Files:         []string{"src/z.ts", "src/a.ts"},
+	})
+	assert.NilError(t, err)
+	assert.Assert(t, len(result.Facts) >= 4)
+	seenZ := false
+	for _, fact := range result.Facts {
+		if fact.File == "src/z.ts" {
+			seenZ = true
+		} else {
+			assert.Equal(t, fact.File, "src/a.ts")
+			assert.Assert(t, !seenZ)
+		}
+	}
+}
+
+func TestAnalyzeRequiresAFileOrSelectionScope(t *testing.T) {
+	t.Parallel()
+	const source = `const value = 1;`
+	_, err := tsfacts.Analyze(t.Context(), fixtureOptions(source), tsfacts.Request{
+		SchemaVersion: tsfacts.SchemaVersion,
+		Project:       "tsconfig.json",
+	})
+	assert.ErrorContains(t, err, "at least one file or selection is required")
+}
+
 func TestAnalyzeNegotiatesCapabilitiesAndReportsDefaultBudgets(t *testing.T) {
 	t.Parallel()
 	const source = `const value = 1; value;`
@@ -568,8 +651,8 @@ func TestAnalyzeAppliesTypeNodeBudgetDeterministically(t *testing.T) {
 
 	var firstOutput bytes.Buffer
 	var secondOutput bytes.Buffer
-	assert.NilError(t, tsfacts.WriteJSONLines(&firstOutput, first))
-	assert.NilError(t, tsfacts.WriteJSONLines(&secondOutput, second))
+	assert.NilError(t, transport.WriteJSONLines(&firstOutput, first))
+	assert.NilError(t, transport.WriteJSONLines(&secondOutput, second))
 	assert.Equal(t, firstOutput.String(), secondOutput.String())
 }
 
@@ -610,8 +693,8 @@ func TestWriteJSONLinesIsDeterministic(t *testing.T) {
 	second := analyzeFixture(t, source, request)
 	var firstOutput bytes.Buffer
 	var secondOutput bytes.Buffer
-	assert.NilError(t, tsfacts.WriteJSONLines(&firstOutput, first))
-	assert.NilError(t, tsfacts.WriteJSONLines(&secondOutput, second))
+	assert.NilError(t, transport.WriteJSONLines(&firstOutput, first))
+	assert.NilError(t, transport.WriteJSONLines(&secondOutput, second))
 	assert.Equal(t, firstOutput.String(), secondOutput.String())
 	assert.Assert(t, strings.HasSuffix(firstOutput.String(), "\n"))
 	assert.Equal(t, strings.Count(firstOutput.String(), "\n"), 1+len(first.Files)+len(first.Types)+len(first.Declarations)+len(first.Symbols)+len(first.Facts))
@@ -681,6 +764,15 @@ func typeByID(t *testing.T, result *tsfacts.Result, id tsfacts.TypeID) tsfacts.T
 	}
 	t.Fatalf("type %q not found", id)
 	return tsfacts.TypeRecord{}
+}
+
+func factAtStart(result *tsfacts.Result, start int) *tsfacts.FactRecord {
+	for index := range result.Facts {
+		if result.Facts[index].Span.Start == start {
+			return &result.Facts[index]
+		}
+	}
+	return nil
 }
 
 func symbolByID(t *testing.T, result *tsfacts.Result, id tsfacts.SymbolID) tsfacts.SymbolRecord {

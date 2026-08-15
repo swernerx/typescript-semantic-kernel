@@ -9,8 +9,20 @@ go run ./cmd/tsfacts <<'JSON'
 JSON
 ```
 
+Omitting `selections` requests every supported semantic occurrence in the
+listed source files:
+
+```sh
+go run ./cmd/tsfacts <<'JSON'
+{"schemaVersion":1,"requiredCapabilities":["occurrence.file-wide"],"project":"tsconfig.json","files":["src/example.ts"]}
+JSON
+```
+
 Offsets are zero-based, half-open UTF-8 byte offsets. A selection must fit
-inside one source token in the current spike. The response contains, in order:
+inside one source token in the current spike. When selections are present they
+are analyzed in request order, and `files`, when present, is their allow-list.
+When selections are omitted, `files` names the file-wide targets. The response
+contains, in order:
 
 1. one `header` record;
 2. `file` records for selected files and referenced declaration files, sorted
@@ -19,13 +31,22 @@ inside one source token in the current spike. The response contains, in order:
 4. interned `declaration` records;
 5. interned `symbol` records, including alias-target edges;
 6. interned `signature` records;
-7. one `fact` record per requested selection.
+7. one `fact` record per selected occurrence: request order for explicit
+   selections, or canonical file and source order for file-wide snapshots.
 
 The header advertises a sorted capability list and reports the effective type
 graph budget. A request can list capabilities it requires; an unknown or
 duplicate requirement fails before project loading. Omitting either budget, or
 passing zero, selects the schema-v1 defaults of 4096 type nodes and depth 32.
-Negative values are invalid.
+Negative values are invalid. `occurrence.file-wide` advertises support for the
+file-wide scope.
+
+File-wide enumeration visits parser-owned identifiers, private identifiers,
+literals and template-literal tokens, keyword expressions, and keyword type
+nodes for which the checker returns an actual type. Files are ordered by their
+canonical IDs, and occurrences within a file by start offset, end offset, and
+syntax kind. It does not emit punctuation facts or silently include other
+project files.
 
 The first slice exposes the checker's `getTypeAtLocation` result as the required
 `actualType` view. It is the type TypeScript observes at the selected source
@@ -157,10 +178,16 @@ attempted traversal, and whether a budget cutoff occurred. See
 
 For identical input, normalization fixes capability and issue ordering, file
 and declaration ordering, first-discovery graph IDs, table category order,
-request-ordered facts, and deterministic JSON object keys. Canonical fixture
-corpus v0 covers cycles and sharing, missing type views, budget truncation,
-diagnostic recovery, and all four entity states. Tests decode, validate, and
-re-encode every fixture byte for byte.
+mode-specific fact ordering, and deterministic JSON object keys. Canonical
+fixture corpus v0 covers cycles and sharing, missing type views, budget
+truncation, diagnostic recovery, and all four entity states. Tests decode,
+validate, and re-encode every fixture byte for byte.
+
+Snapshot construction and graph validation live in `internal/semanticfacts`;
+`internal/tsfacts` is the JSON Lines transport. Both explicit and file-wide
+occurrences use the same root collector, so selecting a file-wide occurrence
+explicitly preserves its semantic views. See
+[ADR-0007](adr/0007-separate-semantic-snapshot-building-from-json-lines.md).
 
 Schema v1 readers ignore unknown object fields, accept additional sorted
 capability names, and retain unknown issue codes. They reject unknown record,

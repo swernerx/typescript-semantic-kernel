@@ -14,3 +14,4 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0004](0004-make-optional-type-view-availability-explicit.md) | Accepted | Make optional type-view availability explicit |
 | [0005](0005-use-response-local-referential-graph-tables.md) | Accepted | Use response-local referential graph tables |
 | [0006](0006-negotiate-capabilities-and-bound-type-graphs.md) | Accepted | Negotiate capabilities and bound type graphs |
+| [0007](0007-separate-semantic-snapshot-building-from-json-lines.md) | Accepted | Separate semantic snapshot building from JSON Lines transport |

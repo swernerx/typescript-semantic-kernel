@@ -1,4 +1,4 @@
-package tsfacts
+package semanticfacts
 
 const (
 	SchemaVersion    = 1
