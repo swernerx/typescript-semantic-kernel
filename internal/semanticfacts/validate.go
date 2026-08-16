@@ -9,9 +9,10 @@ import (
 
 var knownTypeKinds = map[string]struct{}{
 	"any": {}, "array": {}, "bigint": {}, "boolean": {}, "callable": {}, "error": {},
-	"intersection": {}, "literal": {}, "never": {}, "null": {}, "number": {},
-	"non_primitive": {}, "object": {}, "opaque": {}, "reference": {}, "string": {}, "symbol": {},
-	"this": {}, "truncated": {}, "tuple": {}, "type_parameter": {}, "undefined": {},
+	"conditional": {}, "index": {}, "indexed_access": {}, "intersection": {}, "literal": {}, "mapped": {},
+	"never": {}, "null": {}, "number": {}, "non_primitive": {}, "object": {}, "opaque": {},
+	"reference": {}, "string": {}, "string_mapping": {}, "substitution": {}, "symbol": {},
+	"template_literal": {}, "this": {}, "truncated": {}, "tuple": {}, "type_parameter": {}, "undefined": {},
 	"union": {}, "unique_symbol": {}, "unknown": {}, "unsupported": {}, "void": {},
 }
 
@@ -195,7 +196,7 @@ func ValidateResult(result *Result) error {
 
 	for _, record := range result.Types {
 		owner := "type " + string(record.ID)
-		typeEdges := appendTypeIDs(record.Members, record.Target, record.TypeArguments, record.Constraint, record.Default)
+		typeEdges := typeRecordTypeEdges(record)
 		symbolEdges := appendSymbolIDs(record.Properties, record.Symbol)
 		if err := requireTypes(types, owner, typeEdges); err != nil {
 			return err
@@ -336,6 +337,21 @@ func validateTypeShape(record TypeRecord) error {
 	if record.Tuple != nil && record.TypeKind != "tuple" {
 		return fmt.Errorf("type %q has tuple details for typeKind %q", record.ID, record.TypeKind)
 	}
+	if record.Conditional != nil && record.TypeKind != "conditional" {
+		return fmt.Errorf("type %q has conditional details for typeKind %q", record.ID, record.TypeKind)
+	}
+	if record.Mapped != nil && record.TypeKind != "mapped" {
+		return fmt.Errorf("type %q has mapped details for typeKind %q", record.ID, record.TypeKind)
+	}
+	if record.IndexedAccess != nil && record.TypeKind != "indexed_access" {
+		return fmt.Errorf("type %q has indexed-access details for typeKind %q", record.ID, record.TypeKind)
+	}
+	if record.TemplateLiteral != nil && record.TypeKind != "template_literal" {
+		return fmt.Errorf("type %q has template-literal details for typeKind %q", record.ID, record.TypeKind)
+	}
+	if record.Substitution != nil && record.TypeKind != "substitution" {
+		return fmt.Errorf("type %q has substitution details for typeKind %q", record.ID, record.TypeKind)
+	}
 	switch record.TypeKind {
 	case "array":
 		if record.Array == nil {
@@ -363,8 +379,69 @@ func validateTypeShape(record TypeRecord) error {
 		if record.Target == "" {
 			return fmt.Errorf("reference type %q requires a target", record.ID)
 		}
+	case "index", "string_mapping":
+		if err := validateRequiredAdvancedEdges(record, record.Target == "", "a target"); err != nil {
+			return err
+		}
+	case "conditional":
+		if record.Conditional == nil {
+			return fmt.Errorf("conditional type %q requires conditional details", record.ID)
+		}
+		if err := validateRequiredAdvancedEdges(record, record.Conditional.CheckType == "" || record.Conditional.ExtendsType == "" || record.Conditional.TrueType == "" || record.Conditional.FalseType == "", "check, extends, true, and false types"); err != nil {
+			return err
+		}
+	case "mapped":
+		if record.Mapped == nil {
+			return fmt.Errorf("mapped type %q requires mapped details", record.ID)
+		}
+		if err := validateRequiredAdvancedEdges(record, record.Mapped.TypeParameter == "" || record.Mapped.ConstraintType == "" || record.Mapped.TemplateType == "", "type parameter, constraint, and template types"); err != nil {
+			return err
+		}
+		if !validMappedModifier(record.Mapped.ReadonlyModifier) || !validMappedModifier(record.Mapped.OptionalModifier) {
+			return fmt.Errorf("mapped type %q has invalid modifiers", record.ID)
+		}
+	case "indexed_access":
+		if record.IndexedAccess == nil {
+			return fmt.Errorf("indexed-access type %q requires indexedAccess details", record.ID)
+		}
+		if err := validateRequiredAdvancedEdges(record, record.IndexedAccess.ObjectType == "" || record.IndexedAccess.IndexType == "", "object and index types"); err != nil {
+			return err
+		}
+	case "template_literal":
+		if record.TemplateLiteral == nil {
+			return fmt.Errorf("template-literal type %q requires templateLiteral details", record.ID)
+		}
+		if len(record.TemplateLiteral.Texts) != len(record.TemplateLiteral.Types)+1 {
+			return fmt.Errorf("template-literal type %q requires one more text than type placeholder", record.ID)
+		}
+	case "substitution":
+		if record.Substitution == nil {
+			return fmt.Errorf("substitution type %q requires substitution details", record.ID)
+		}
+		if err := validateRequiredAdvancedEdges(record, record.Substitution.BaseType == "" || record.Substitution.Constraint == "", "base and constraint types"); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func validMappedModifier(modifier string) bool {
+	return modifier == "add" || modifier == "remove" || modifier == "preserve"
+}
+
+func validateRequiredAdvancedEdges(record TypeRecord, missing bool, description string) error {
+	if !missing {
+		return nil
+	}
+	if record.Complete {
+		return fmt.Errorf("%s type %q requires %s", record.TypeKind, record.ID, description)
+	}
+	for _, issue := range record.Issues {
+		if issue.Code == GraphIssueMissingTypeEdge {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s type %q omits %s without %q", record.TypeKind, record.ID, description, GraphIssueMissingTypeEdge)
 }
 
 func validateEntityState(kind string, id string, state string, issues []GraphIssue, complete bool, truncated bool) error {

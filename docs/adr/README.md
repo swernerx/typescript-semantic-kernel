@@ -17,3 +17,4 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0007](0007-separate-semantic-snapshot-building-from-json-lines.md) | Accepted | Separate semantic snapshot building from JSON Lines transport |
 | [0008](0008-export-core-composite-types-as-normalized-graph-nodes.md) | Accepted | Export core composite types as normalized graph nodes |
 | [0009](0009-intern-object-symbol-and-signature-graphs-before-finalization.md) | Accepted | Intern object, symbol, and signature graphs before finalization |
+| [0010](0010-export-advanced-types-through-semantic-detail-records.md) | Accepted | Export advanced types through semantic detail records |

@@ -13,6 +13,7 @@ type typeInterner struct {
 	checker          *checker.Checker
 	limits           BudgetLimits
 	coreComposite    bool
+	advancedTypes    bool
 	references       bool
 	signatureGraph   bool
 	symbols          *symbolInterner
@@ -26,11 +27,12 @@ type typeInterner struct {
 	budgetTruncated  bool
 }
 
-func newTypeInterner(c *checker.Checker, limits BudgetLimits, coreComposite bool) *typeInterner {
+func newTypeInterner(c *checker.Checker, limits BudgetLimits, coreComposite bool, advancedTypes bool) *typeInterner {
 	return &typeInterner{
 		checker:       c,
 		limits:        limits,
 		coreComposite: coreComposite,
+		advancedTypes: advancedTypes,
 		byType:        make(map[*checker.Type]TypeID),
 		byID:          make(map[TypeID]int),
 		limitIDs:      make(map[string]TypeID),
@@ -114,6 +116,24 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 			record.TypeKind = "symbol"
 		case i.coreComposite && flags&checker.TypeFlagsNonPrimitive != 0:
 			record.TypeKind = "non_primitive"
+		case i.advancedTypes && flags&checker.TypeFlagsIndex != 0:
+			record.TypeKind = "index"
+			record.Target = i.internExpected(&record, t.AsIndexType().Target(), depth+1)
+		case i.advancedTypes && flags&checker.TypeFlagsTemplateLiteral != 0:
+			record.TypeKind = "template_literal"
+			i.internTemplateLiteralEdges(&record, t, depth)
+		case i.advancedTypes && flags&checker.TypeFlagsStringMapping != 0:
+			record.TypeKind = "string_mapping"
+			record.Target = i.internExpected(&record, t.AsStringMappingType().Target(), depth+1)
+		case i.advancedTypes && flags&checker.TypeFlagsSubstitution != 0:
+			record.TypeKind = "substitution"
+			i.internSubstitutionEdges(&record, t, depth)
+		case i.advancedTypes && flags&checker.TypeFlagsIndexedAccess != 0:
+			record.TypeKind = "indexed_access"
+			i.internIndexedAccessEdges(&record, t, depth)
+		case i.advancedTypes && flags&checker.TypeFlagsConditional != 0:
+			record.TypeKind = "conditional"
+			i.internConditionalEdges(&record, t, depth)
 		case flags&checker.TypeFlagsUnion != 0:
 			record.TypeKind = "union"
 			record.Members, record.Complete = i.internMembers(i.compositeMembers(t), depth+1)
@@ -141,6 +161,10 @@ func (i *typeInterner) internAtDepth(t *checker.Type, depth int) TypeID {
 			coreObjectShape := false
 			collectionShape := i.checker.IsArrayType(t) || checker.IsTupleType(t)
 			switch {
+			case i.advancedTypes && t.ObjectFlags()&checker.ObjectFlagsMapped != 0:
+				record.TypeKind = "mapped"
+				i.internMappedEdges(&record, t, depth)
+				coreObjectShape = true
 			case i.coreComposite && i.checker.IsArrayType(t):
 				record.TypeKind = "array"
 				record.Array = &ArrayTypeDetails{Readonly: isReadonlyArray(t)}
@@ -257,6 +281,18 @@ func (i *typeInterner) typeSortKey(t *checker.Type) string {
 		kind = "symbol"
 	case flags&checker.TypeFlagsNonPrimitive != 0:
 		kind = "non_primitive"
+	case i.advancedTypes && flags&checker.TypeFlagsIndex != 0:
+		kind = "index"
+	case i.advancedTypes && flags&checker.TypeFlagsTemplateLiteral != 0:
+		kind = "template_literal"
+	case i.advancedTypes && flags&checker.TypeFlagsStringMapping != 0:
+		kind = "string_mapping"
+	case i.advancedTypes && flags&checker.TypeFlagsSubstitution != 0:
+		kind = "substitution"
+	case i.advancedTypes && flags&checker.TypeFlagsIndexedAccess != 0:
+		kind = "indexed_access"
+	case i.advancedTypes && flags&checker.TypeFlagsConditional != 0:
+		kind = "conditional"
 	case flags&checker.TypeFlagsUnion != 0:
 		kind = "union"
 	case flags&checker.TypeFlagsIntersection != 0:
@@ -264,9 +300,81 @@ func (i *typeInterner) typeSortKey(t *checker.Type) string {
 	case flags&checker.TypeFlagsTypeParameter != 0:
 		kind = "type_parameter"
 	case flags&checker.TypeFlagsObject != 0:
-		kind = "object"
+		if flags := t.ObjectFlags(); i.advancedTypes && flags&checker.ObjectFlagsMapped != 0 {
+			kind = "mapped"
+		} else {
+			kind = "object"
+		}
 	}
 	return kind + "\x00" + i.checker.TypeToString(t)
+}
+
+func (i *typeInterner) internConditionalEdges(record *TypeRecord, t *checker.Type, depth int) {
+	conditional := t.AsConditionalType()
+	details := i.checker.GetSemanticConditionalTypeDetails(t)
+	record.Conditional = &ConditionalTypeDetails{
+		CheckType:    i.internExpected(record, conditional.CheckType(), depth+1),
+		ExtendsType:  i.internExpected(record, conditional.ExtendsType(), depth+1),
+		TrueType:     i.internExpected(record, i.checker.GetTrueTypeOfConditionalType(t), depth+1),
+		FalseType:    i.internExpected(record, i.checker.GetFalseTypeOfConditionalType(t), depth+1),
+		Distributive: details.Distributive,
+	}
+	for _, typeParameter := range details.InferTypeParameters {
+		record.Conditional.InferTypeParameters = append(record.Conditional.InferTypeParameters, i.internExpected(record, typeParameter, depth+1))
+	}
+}
+
+func (i *typeInterner) internMappedEdges(record *TypeRecord, t *checker.Type, depth int) {
+	details := i.checker.GetSemanticMappedTypeDetails(t)
+	record.Mapped = &MappedTypeDetails{
+		TypeParameter:    i.internExpected(record, details.TypeParameter, depth+1),
+		ConstraintType:   i.internExpected(record, details.ConstraintType, depth+1),
+		NameType:         i.internAtDepth(details.NameType, depth+1),
+		TemplateType:     i.internExpected(record, details.TemplateType, depth+1),
+		ModifiersType:    i.internAtDepth(details.ModifiersType, depth+1),
+		ReadonlyModifier: details.ReadonlyModifier,
+		OptionalModifier: details.OptionalModifier,
+	}
+	if target := t.Target(); target != nil {
+		if target == t {
+			record.Target = record.ID
+		} else {
+			record.Target = i.internAtDepth(target, depth+1)
+		}
+	}
+}
+
+func (i *typeInterner) internIndexedAccessEdges(record *TypeRecord, t *checker.Type, depth int) {
+	indexed := t.AsIndexedAccessType()
+	record.IndexedAccess = &IndexedAccessTypeDetails{
+		ObjectType: i.internExpected(record, indexed.ObjectType(), depth+1),
+		IndexType:  i.internExpected(record, indexed.IndexType(), depth+1),
+	}
+}
+
+func (i *typeInterner) internTemplateLiteralEdges(record *TypeRecord, t *checker.Type, depth int) {
+	template := t.AsTemplateLiteralType()
+	types, _ := i.internMembers(template.Types(), depth+1)
+	record.TemplateLiteral = &TemplateLiteralTypeDetails{
+		Texts: slices.Clone(template.Texts()),
+		Types: types,
+	}
+}
+
+func (i *typeInterner) internSubstitutionEdges(record *TypeRecord, t *checker.Type, depth int) {
+	substitution := t.AsSubstitutionType()
+	record.Substitution = &SubstitutionTypeDetails{
+		BaseType:   i.internExpected(record, substitution.BaseType(), depth+1),
+		Constraint: i.internExpected(record, substitution.SubstConstraint(), depth+1),
+	}
+}
+
+func (i *typeInterner) internExpected(record *TypeRecord, t *checker.Type, depth int) TypeID {
+	if t == nil {
+		markTypeIncomplete(record, EntityStateTruncated, GraphIssue{Code: GraphIssueMissingTypeEdge})
+		return ""
+	}
+	return i.internAtDepth(t, depth)
 }
 
 func (i *typeInterner) internReferenceEdges(record *TypeRecord, t *checker.Type, depth int) {

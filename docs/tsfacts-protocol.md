@@ -44,6 +44,8 @@ composite type variants; a request must require it before those new variants
 are emitted. Requiring `graph.references` enables deep object, property, and
 symbol relationships. Requiring `graph.signatures` additionally enables
 callable traversal and implies the reference traversal needed by parameters.
+`types.advanced` advertises deferred generic type forms; a request must require
+it before those variants are emitted.
 
 File-wide enumeration visits parser-owned identifiers, private identifiers,
 literals and template-literal tokens, keyword expressions, and keyword type
@@ -111,6 +113,18 @@ readonly state. References keep a target and positional type arguments; an
 originating generic target points to itself. Type parameters preserve direct
 constraint, default, and instantiated-target edges. Shared checker types reuse
 one response-local ID.
+
+With `types.advanced` negotiated, conditional types retain their check,
+extends, true, and false branches, inferred type parameters, and distributive
+state. Mapped types retain their type parameter, constraint, optional name
+remapping, value template, optional modifiers source, and readonly/optional
+operation as `add`, `remove`, or `preserve`. Indexed-access types retain object
+and index operands. Index (`keyof`) and string-mapping types retain their
+targets. Template-literal types retain ordered text fragments and placeholder
+types, and substitution types retain their base and known constraint. Every
+edge is a response-local TypeID and participates in normal cycle, sharing,
+completeness, and budget handling. See
+[ADR-0010](adr/0010-export-advanced-types-through-semantic-detail-records.md).
 
 Union and intersection members are normalized by protocol category and stable
 checker display when the capability is negotiated. Positional type arguments
@@ -212,6 +226,9 @@ limit. Sentinel nodes are not charged. Owners that point to them carry
 `referenced-incomplete-type`. The header reports charged nodes, deepest
 attempted traversal, and whether a budget cutoff occurred. See
 [ADR-0006](adr/0006-negotiate-capabilities-and-bound-type-graphs.md).
+An absent checker edge required by an advanced shape makes its owner truncated
+with `missing-type-edge`; the owner is never reported complete with a silently
+missing operand.
 
 For identical input, normalization fixes capability and issue ordering, file
 and declaration ordering, first-discovery graph IDs, table category order,
@@ -232,8 +249,11 @@ entity-state, type-kind, and signature-kind variants. New variants must be
 gated by a capability explicitly requested by the consumer; incompatible
 required fields or changed meanings require a new schema version. If
 `types.core-composite` is not requested, the producer retains the earlier
-truncated or unsupported fallback for its new variants. If graph capabilities
-are not requested, it retains shallow symbol and object output.
+truncated or unsupported fallback for its new variants. If `types.advanced` is
+not requested, advanced non-object forms remain explicitly unsupported and
+mapped types retain their earlier object-compatible representation. If graph
+capabilities are not requested, the producer retains shallow symbol and object
+output.
 
 This spike intentionally omits inference traces, diagnostic payloads, project
 references, daemon reuse, symbol/signature budget counters, and the OXC bridge.

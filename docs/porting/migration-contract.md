@@ -36,6 +36,10 @@ Schema v1 currently guarantees:
   unions and intersections, arrays, tuples, references, type parameters,
   `this`, unique symbols, targets, type arguments, direct constraints, and
   defaults;
+- negotiated advanced variants for conditional, mapped, indexed-access,
+  `keyof`, template-literal, string-mapping, and substitution types, including
+  conditional branches and inferred parameters, mapped parameters and
+  modifiers, and all ordered operand edges;
 - an explicit actual type plus contextual, widened, apparent, and declared
   roots whose absence is explained by machine-readable view states;
 - mutually exclusive annotation and inferred origin views for symbol-backed
@@ -56,11 +60,10 @@ Schema v1 currently guarantees:
 - a canonical JSON Lines fixture corpus whose graph invariants and byte-level
   normalization are executable.
 
-The initial slice does not guarantee complete structural serialization of every
-TypeScript type, inference traces, declarations outside the project root or
-TypeScript default libraries, symbol/signature budget counters, project
-references, or an OXC bridge. Those are migration queue items, not implicit
-passes.
+The initial slice does not guarantee inference traces, declarations outside
+the project root or TypeScript default libraries, symbol/signature budget
+counters, project references, or an OXC bridge. Those are migration queue
+items, not implicit passes.
 
 ## Equivalence oracle
 
