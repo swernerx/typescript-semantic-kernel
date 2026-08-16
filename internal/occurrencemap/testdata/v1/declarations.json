@@ -1,0 +1,37 @@
+{
+  "description": "Declaration names include exact matches and a deterministically rejected duplicate anchor",
+  "sources": {"src/declarations.ts":"const value = 1;\nlet other = 2;\nclass C { #secret = 3; }"},
+  "facts": [
+    {"file":"src/declarations.ts","span":{"start":6,"end":11},"syntaxKind":"KindIdentifier"},
+    {"file":"src/declarations.ts","span":{"start":21,"end":26},"syntaxKind":"KindIdentifier"},
+    {"file":"src/declarations.ts","span":{"start":42,"end":49},"syntaxKind":"KindPrivateIdentifier"}
+  ],
+  "nodes": [
+    {"nodeId":2,"file":"src/declarations.ts","span":{"start":6,"end":11},"syntaxKind":"KindIdentifier"},
+    {"nodeId":7,"file":"src/declarations.ts","span":{"start":21,"end":26},"syntaxKind":"KindIdentifier"},
+    {"nodeId":3,"file":"src/declarations.ts","span":{"start":21,"end":26},"syntaxKind":"KindIdentifier"},
+    {"nodeId":9,"file":"src/declarations.ts","span":{"start":42,"end":49},"syntaxKind":"KindPrivateIdentifier"}
+  ],
+  "expected": {
+    "contractVersion":1,
+    "mappings":[
+      {"factIndex":0,"nodeId":2,"match":"exact"},
+      {"factIndex":2,"nodeId":9,"match":"exact"}
+    ],
+    "diagnostics":[
+      {
+        "code":"multiply-mapped",
+        "factIndex":1,
+        "file":"src/declarations.ts",
+        "span":{"start":21,"end":26},
+        "syntaxKind":"KindIdentifier",
+        "candidates":[{"nodeId":3},{"nodeId":7}]
+      }
+    ],
+    "summary":{"facts":3,"mapped":2,"exact":2,"normalized":0,"unmapped":0,"multiplyMapped":1},
+    "bySyntaxKind":[
+      {"syntaxKind":"KindIdentifier","metrics":{"facts":2,"mapped":1,"exact":1,"normalized":0,"unmapped":0,"multiplyMapped":1}},
+      {"syntaxKind":"KindPrivateIdentifier","metrics":{"facts":1,"mapped":1,"exact":1,"normalized":0,"unmapped":0,"multiplyMapped":0}}
+    ]
+  }
+}

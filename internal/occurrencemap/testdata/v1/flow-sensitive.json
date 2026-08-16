@@ -1,0 +1,35 @@
+{
+  "description": "Repeated flow-sensitive references to one symbol remain separate source occurrences and node mappings",
+  "sources": {"src/flow.ts":"let value: string | number;\nif (typeof value === \"string\") {\n  (value).toUpperCase();\n}\nvalue;"},
+  "facts": [
+    {"file":"src/flow.ts","span":{"start":39,"end":44},"syntaxKind":"KindIdentifier"},
+    {"file":"src/flow.ts","span":{"start":64,"end":69},"syntaxKind":"KindIdentifier"},
+    {"file":"src/flow.ts","span":{"start":88,"end":93},"syntaxKind":"KindIdentifier"}
+  ],
+  "nodes": [
+    {"nodeId":101,"file":"src/flow.ts","span":{"start":39,"end":44},"syntaxKind":"KindIdentifier"},
+    {
+      "nodeId":102,
+      "file":"src/flow.ts",
+      "span":{"start":63,"end":70},
+      "syntaxKind":"KindParenthesizedExpression",
+      "normalizations":[
+        {"span":{"start":64,"end":69},"syntaxKind":"KindIdentifier","rule":"protocol-inner-span"}
+      ]
+    },
+    {"nodeId":103,"file":"src/flow.ts","span":{"start":88,"end":93},"syntaxKind":"KindIdentifier"}
+  ],
+  "expected": {
+    "contractVersion":1,
+    "mappings":[
+      {"factIndex":0,"nodeId":101,"match":"exact"},
+      {"factIndex":1,"nodeId":102,"match":"normalized","rule":"protocol-inner-span"},
+      {"factIndex":2,"nodeId":103,"match":"exact"}
+    ],
+    "diagnostics":[],
+    "summary":{"facts":3,"mapped":3,"exact":2,"normalized":1,"unmapped":0,"multiplyMapped":0},
+    "bySyntaxKind":[
+      {"syntaxKind":"KindIdentifier","metrics":{"facts":3,"mapped":3,"exact":2,"normalized":1,"unmapped":0,"multiplyMapped":0}}
+    ]
+  }
+}

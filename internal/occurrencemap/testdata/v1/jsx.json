@@ -1,0 +1,33 @@
+{
+  "description": "JSX names match exactly while a quoted attribute value uses an explicit outer-span anchor",
+  "sources": {"src/app.tsx":"<Card label=\"ready\" />"},
+  "facts": [
+    {"file":"src/app.tsx","span":{"start":1,"end":5},"syntaxKind":"KindIdentifier"},
+    {"file":"src/app.tsx","span":{"start":12,"end":19},"syntaxKind":"KindStringLiteral"}
+  ],
+  "nodes": [
+    {"nodeId":41,"file":"src/app.tsx","span":{"start":1,"end":5},"syntaxKind":"KindIdentifier"},
+    {
+      "nodeId":42,
+      "file":"src/app.tsx",
+      "span":{"start":13,"end":18},
+      "syntaxKind":"KindJSXAttributeValue",
+      "normalizations":[
+        {"span":{"start":12,"end":19},"syntaxKind":"KindStringLiteral","rule":"protocol-outer-span"}
+      ]
+    }
+  ],
+  "expected": {
+    "contractVersion":1,
+    "mappings":[
+      {"factIndex":0,"nodeId":41,"match":"exact"},
+      {"factIndex":1,"nodeId":42,"match":"normalized","rule":"protocol-outer-span"}
+    ],
+    "diagnostics":[],
+    "summary":{"facts":2,"mapped":2,"exact":1,"normalized":1,"unmapped":0,"multiplyMapped":0},
+    "bySyntaxKind":[
+      {"syntaxKind":"KindIdentifier","metrics":{"facts":1,"mapped":1,"exact":1,"normalized":0,"unmapped":0,"multiplyMapped":0}},
+      {"syntaxKind":"KindStringLiteral","metrics":{"facts":1,"mapped":1,"exact":0,"normalized":1,"unmapped":0,"multiplyMapped":0}}
+    ]
+  }
+}
