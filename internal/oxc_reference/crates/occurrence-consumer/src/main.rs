@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, fs, io::BufReader, sync::Arc};
 use oxc_allocator::Allocator;
 use oxc_occurrence_consumer::{
     contract::{Report, correlate},
+    evidence::run_evidence,
     facts::SemanticSnapshot,
     fixture::load_fixtures,
     inspector::{InspectionReport, InspectorLimits},
@@ -53,11 +54,41 @@ fn main() -> Result<(), String> {
         [command, snapshot, source, logical_file] if command == "inspect" => {
             inspect_snapshot(snapshot, source, Some(logical_file.as_str()))
         }
+        [command, tsfacts, corpus] if command == "evidence" => {
+            print_evidence(tsfacts, corpus, None)
+        }
+        [command, tsfacts, corpus, output_flag, output]
+            if command == "evidence" && output_flag == "--output" =>
+        {
+            print_evidence(tsfacts, corpus, Some(output))
+        }
         _ => Err(
-            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file]"
-                .to_owned(),
+            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>]".to_owned(),
         ),
     }
+}
+
+fn print_evidence(tsfacts: &str, corpus: &str, output: Option<&String>) -> Result<(), String> {
+    let report = run_evidence(
+        std::path::Path::new(tsfacts),
+        std::path::Path::new(corpus),
+        InspectorLimits::default(),
+    )?;
+    let mut bytes = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"    ");
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
+    report
+        .serialize(&mut serializer)
+        .map_err(|error| format!("serialize evidence: {error}"))?;
+    let serialized = String::from_utf8(bytes)
+        .map_err(|error| format!("serialize evidence as UTF-8: {error}"))?;
+    if let Some(output) = output {
+        fs::write(output, format!("{serialized}\n"))
+            .map_err(|error| format!("write evidence {output:?}: {error}"))?;
+    } else {
+        println!("{serialized}");
+    }
+    Ok(())
 }
 
 fn print_fixture_reports() -> Result<(), String> {

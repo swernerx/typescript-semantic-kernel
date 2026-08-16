@@ -465,6 +465,25 @@ pub struct TypeGraph {
     signatures: BTreeMap<SignatureId, SignatureRecord>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphRecordCounts {
+    pub types: usize,
+    pub declarations: usize,
+    pub symbols: usize,
+    pub signatures: usize,
+    pub edges: usize,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityStateCounts {
+    pub complete: usize,
+    pub truncated: usize,
+    pub unsupported: usize,
+    pub error: usize,
+}
+
 impl TypeGraph {
     pub fn type_record(&self, id: &TypeId) -> Option<&TypeRecord> {
         self.types.get(id)
@@ -486,6 +505,54 @@ impl TypeGraph {
         self.types.len() + self.declarations.len() + self.symbols.len() + self.signatures.len()
     }
 
+    pub fn record_counts(&self) -> GraphRecordCounts {
+        GraphRecordCounts {
+            types: self.types.len(),
+            declarations: self.declarations.len(),
+            symbols: self.symbols.len(),
+            signatures: self.signatures.len(),
+            edges: self
+                .references()
+                .map(|reference| {
+                    self.edges(&reference)
+                        .expect("indexed graph node has an edge list")
+                        .len()
+                })
+                .sum(),
+        }
+    }
+
+    pub fn state_counts(&self) -> EntityStateCounts {
+        self.types
+            .values()
+            .map(|record| record.state)
+            .chain(self.symbols.values().map(|record| record.state))
+            .chain(self.signatures.values().map(|record| record.state))
+            .fold(EntityStateCounts::default(), |mut counts, state| {
+                match state {
+                    EntityState::Complete => counts.complete += 1,
+                    EntityState::Truncated => counts.truncated += 1,
+                    EntityState::Unsupported => counts.unsupported += 1,
+                    EntityState::Error => counts.error += 1,
+                }
+                counts
+            })
+    }
+
+    pub fn sharing_counts(&self) -> (usize, usize) {
+        let targets = self
+            .references()
+            .flat_map(|reference| {
+                self.edges(&reference)
+                    .expect("indexed graph node has an edge list")
+                    .into_iter()
+                    .map(|edge| edge.target)
+            })
+            .collect::<Vec<_>>();
+        let unique_targets = targets.iter().collect::<BTreeSet<_>>().len();
+        (targets.len().saturating_sub(unique_targets), targets.len())
+    }
+
     pub fn contains(&self, reference: &GraphRef) -> bool {
         match reference {
             GraphRef::Type(id) => self.types.contains_key(id),
@@ -505,15 +572,7 @@ impl TypeGraph {
     }
 
     fn validate(&self) -> Result<(), String> {
-        for reference in self
-            .types
-            .keys()
-            .cloned()
-            .map(GraphRef::Type)
-            .chain(self.symbols.keys().cloned().map(GraphRef::Symbol))
-            .chain(self.signatures.keys().cloned().map(GraphRef::Signature))
-            .chain(self.declarations.keys().cloned().map(GraphRef::Declaration))
-        {
+        for reference in self.references() {
             for edge in self.edges(&reference).expect("indexed graph node") {
                 if !self.contains(&edge.target) {
                     return Err(format!(
@@ -525,13 +584,44 @@ impl TypeGraph {
         }
         Ok(())
     }
+
+    fn references(&self) -> impl Iterator<Item = GraphRef> + '_ {
+        self.types
+            .keys()
+            .cloned()
+            .map(GraphRef::Type)
+            .chain(self.symbols.keys().cloned().map(GraphRef::Symbol))
+            .chain(self.signatures.keys().cloned().map(GraphRef::Signature))
+            .chain(self.declarations.keys().cloned().map(GraphRef::Declaration))
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProducerBudgetLimits {
+    pub max_type_nodes: u32,
+    pub max_type_depth: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProducerBudgetReport {
+    pub limits: ProducerBudgetLimits,
+    pub type_nodes_used: u32,
+    pub max_type_depth_observed: u32,
+    pub truncated: bool,
 }
 
 #[derive(Debug)]
 pub struct SemanticSnapshot {
     pub schema_version: u32,
+    pub typescript_version: String,
+    pub typescript_revision: String,
     pub offset_encoding: String,
     pub capabilities: Vec<String>,
+    pub budgets: ProducerBudgetReport,
+    pub diagnostic_count: u32,
+    file_count: usize,
     graph: Arc<TypeGraph>,
     facts: Vec<OccurrenceTypeFacts>,
 }
@@ -544,6 +634,7 @@ impl SemanticSnapshot {
         let mut symbols = BTreeMap::new();
         let mut signatures = BTreeMap::new();
         let mut facts = Vec::new();
+        let mut file_count = 0;
 
         for (line_index, line) in reader.lines().enumerate() {
             let line = line.map_err(|error| format!("read line {}: {error}", line_index + 1))?;
@@ -566,7 +657,7 @@ impl SemanticSnapshot {
                             .map_err(|error| format!("decode header: {error}"))?,
                     );
                 }
-                "file" => {}
+                "file" => file_count += 1,
                 "type" => insert_record(
                     &mut types,
                     serde_json::from_value::<TypeRecord>(value)
@@ -665,8 +756,13 @@ impl SemanticSnapshot {
 
         Ok(Self {
             schema_version: header.schema_version,
+            typescript_version: header.typescript_version,
+            typescript_revision: header.typescript_revision,
             offset_encoding: header.offset_encoding,
             capabilities: header.capabilities,
+            budgets: header.budgets,
+            diagnostic_count: header.diagnostic_count,
+            file_count,
             graph,
             facts,
         })
@@ -679,15 +775,27 @@ impl SemanticSnapshot {
     pub fn facts(&self) -> &[OccurrenceTypeFacts] {
         &self.facts
     }
+
+    pub fn file_count(&self) -> usize {
+        self.file_count
+    }
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HeaderRecord {
     schema_version: u32,
+    #[serde(default)]
+    typescript_version: String,
+    #[serde(default)]
+    typescript_revision: String,
     offset_encoding: String,
     #[serde(default)]
     capabilities: Vec<String>,
+    #[serde(default)]
+    budgets: ProducerBudgetReport,
+    #[serde(default)]
+    diagnostic_count: u32,
 }
 
 fn insert_record<K, V>(

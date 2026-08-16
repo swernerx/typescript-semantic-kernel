@@ -10,8 +10,8 @@
   evidence justifies pruning.
 - **Authority:** This repository may implement, test, and merge the adapter and
   its conformance corpus. Replacing checker categories with another backend
-  requires the compatibility threshold described by a later accepted RFC or
-  ADR.
+  requires the compatibility threshold in ADR-0016 and fresh differential
+  evidence from an independent semantic producer.
 
 ## Equivalence boundary
 
@@ -80,6 +80,21 @@ invariants, and re-encode identically. The corpus will grow to differential
 fixtures against TypeScript's observable type and symbol behavior and will
 later be shared by alternate backends.
 
+The Issue #20 evidence runner now exercises the complete representative corpus
+through the real process boundary and internal Rust consumer. On OXC-parseable
+sources it requires full occurrence mapping, no ambiguity, and no transport
+mismatch. That is an identity/attachment gate only. The intentional recovery
+source remains Go-only because the current OXC parse fails; its facts are
+reported as consumer differences rather than omitted.
+
+ADR-0016 selects occurrence identity and attachment plumbing as the first safe
+mechanical port. Primitive/literal type construction is the first proposed
+semantic implementation candidate, but no semantic category may replace Go
+until independent Rust output matches the normalized structured oracle with no
+completeness/state downgrade or new unsupported form. Project loading,
+resolution, binding, symbols, inference, contextual/widened types, overloads,
+generic instantiation, narrowing, and recovery remain Go-authoritative.
+
 ## Gate ladder
 
 1. Focused `internal/semanticfacts` and `internal/tsfacts` tests pass, including
@@ -94,6 +109,8 @@ later be shared by alternate backends.
 6. CI passes on the upstream-supported matrix.
 7. Phase 0 meets every acceptance criterion in RFC 0001 before that RFC becomes
    Accepted.
+8. `./internal/oxc_reference/run-evidence.sh --output <path>` produces stable
+   repeated observations and passes ADR-0016's occurrence/attachment gate.
 
 ## Upstream synchronization
 
