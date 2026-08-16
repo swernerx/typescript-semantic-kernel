@@ -278,5 +278,9 @@ capabilities are not requested, the producer retains shallow symbol and object
 output.
 
 This spike intentionally omits inference traces, diagnostic payloads, project
-references, daemon reuse, symbol/signature budget counters, and the OXC bridge.
-These remain explicit Phase 0 work rather than undocumented protocol behavior.
+references, daemon reuse, symbol/signature budget counters, and an in-process
+OXC bridge. The separate [occurrence correlation
+contract](occurrence-correlation.md) defines exact and normalized consumer-side
+attachment, diagnostics, metrics, and portable fixtures without adding OXC to
+the producer protocol. Actual OXC traversal and `NodeId` side-table ownership
+remain consumer-side work.

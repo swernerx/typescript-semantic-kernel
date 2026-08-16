@@ -58,12 +58,17 @@ Schema v1 currently guarantees:
 - logical TypeScript default-library file identities that do not expose host
   installation paths;
 - a canonical JSON Lines fixture corpus whose graph invariants and byte-level
-  normalization are executable.
+  normalization are executable;
+- a portable occurrence-to-node correlation contract with exact-first indexed
+  lookup, explicit boundary anchors, deterministic ambiguity diagnostics, and
+  machine-readable coverage by syntax kind.
 
 The initial slice does not guarantee inference traces, declarations outside
 the project root or TypeScript default libraries, symbol/signature budget
-counters, project references, or an OXC bridge. Those are migration queue
-items, not implicit passes.
+counters, project references, or an in-process OXC bridge. The Go repository
+provides a consumer-neutral reference correlator and fixtures, but live OXC AST
+traversal and arena-local `NodeId` attachment require a Rust consumer boundary.
+Those remaining items are migration queue work, not implicit passes.
 
 ## Equivalence oracle
 
