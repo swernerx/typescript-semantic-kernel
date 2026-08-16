@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use oxc_allocator::Allocator;
 use oxc_ast::AstKind;
@@ -10,6 +11,8 @@ use oxc_span::{GetSpan, SourceType};
 use crate::contract::{
     NodeCandidate, Normalization, NormalizationRule, Occurrence, Report, Span, correlate,
 };
+use crate::facts::{OccurrenceTypeFacts, SemanticSnapshot, TypeGraph};
+use crate::inspector::{GraphInspector, InspectionReport, InspectorLimits};
 
 /// An arena-scoped OXC view. Typed `NodeId`s never leave this consumer; the
 /// portable report serializes their numeric form only at the JSON boundary.
@@ -20,6 +23,9 @@ pub struct OxcConsumer<'a> {
     candidates: Vec<NodeCandidate>,
     projected_node_ids: HashMap<u32, NodeId>,
     mapped_nodes: HashMap<usize, NodeId>,
+    snapshot: Option<Arc<SemanticSnapshot>>,
+    fact_indices_by_node: HashMap<NodeId, Vec<usize>>,
+    mapping_report: Option<Report>,
 }
 
 impl<'a> OxcConsumer<'a> {
@@ -59,6 +65,9 @@ impl<'a> OxcConsumer<'a> {
             candidates,
             projected_node_ids,
             mapped_nodes: HashMap::new(),
+            snapshot: None,
+            fact_indices_by_node: HashMap::new(),
+            mapping_report: None,
         })
     }
 
@@ -69,6 +78,9 @@ impl<'a> OxcConsumer<'a> {
                 self.file
             ));
         }
+        self.snapshot = None;
+        self.fact_indices_by_node.clear();
+        self.mapping_report = None;
         let report = correlate(facts, &self.candidates)?;
         self.mapped_nodes.clear();
         for mapping in &report.mappings {
@@ -83,8 +95,63 @@ impl<'a> OxcConsumer<'a> {
         Ok(report)
     }
 
+    /// Correlates every semantic occurrence and retains response-local graph
+    /// ownership exactly once. Repeated fact selections are preserved in fact
+    /// order rather than overwriting an earlier attachment to the same node.
+    pub fn attach(&mut self, snapshot: Arc<SemanticSnapshot>) -> Result<Report, String> {
+        let occurrences = snapshot
+            .facts()
+            .iter()
+            .map(OccurrenceTypeFacts::occurrence)
+            .collect::<Vec<_>>();
+        let report = self.correlate(&occurrences)?;
+        self.fact_indices_by_node.clear();
+        for mapping in &report.mappings {
+            let node_id = self
+                .mapped_nodes
+                .get(&mapping.fact_index)
+                .copied()
+                .ok_or_else(|| {
+                    format!(
+                        "mapping for fact {} lost its typed OXC NodeId",
+                        mapping.fact_index
+                    )
+                })?;
+            self.fact_indices_by_node
+                .entry(node_id)
+                .or_default()
+                .push(mapping.fact_index);
+        }
+        self.snapshot = Some(snapshot);
+        self.mapping_report = Some(report.clone());
+        Ok(report)
+    }
+
     pub fn node_for_fact(&self, fact_index: usize) -> Option<NodeId> {
         self.mapped_nodes.get(&fact_index).copied()
+    }
+
+    pub fn type_facts_for_node(
+        &self,
+        node_id: NodeId,
+    ) -> impl Iterator<Item = AttachedTypeFacts<'_>> {
+        self.fact_indices_by_node
+            .get(&node_id)
+            .into_iter()
+            .flatten()
+            .filter_map(|fact_index| {
+                let snapshot = self.snapshot.as_deref()?;
+                let facts = snapshot.facts().get(*fact_index)?;
+                Some(AttachedTypeFacts {
+                    fact_index: *fact_index,
+                    facts,
+                    graph: snapshot.graph(),
+                })
+            })
+    }
+
+    pub fn mapping_report(&self) -> Option<&Report> {
+        self.mapping_report.as_ref()
     }
 
     pub fn source(&self) -> &str {
@@ -97,6 +164,23 @@ impl<'a> OxcConsumer<'a> {
 
     pub fn candidates(&self) -> &[NodeCandidate] {
         &self.candidates
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct AttachedTypeFacts<'a> {
+    pub fact_index: usize,
+    pub facts: &'a OccurrenceTypeFacts,
+    graph: &'a Arc<TypeGraph>,
+}
+
+impl<'a> AttachedTypeFacts<'a> {
+    pub fn graph(&self) -> &'a TypeGraph {
+        self.graph.as_ref()
+    }
+
+    pub fn inspect(&self, limits: InspectorLimits) -> InspectionReport {
+        GraphInspector::new(self.graph(), limits).inspect(self.facts)
     }
 }
 

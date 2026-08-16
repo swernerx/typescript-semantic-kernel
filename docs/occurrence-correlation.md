@@ -130,6 +130,14 @@ with access to the OXC AST and its arena-local `NodeId`s. It:
 3. emits machine-readable mappings, diagnostics, and coverage by syntax kind;
 4. stores successful mappings in an OXC-side typed `NodeId` table.
 
+The TypeFacts attachment layer builds on that mapping without changing this
+portable contract. It retains one shared schema-v1 graph and indexes mapped
+fact indices by typed `NodeId`; repeated facts are not collapsed. Unmapped and
+multiply mapped facts remain in the correlation report. The bounded graph
+inspector follows response-local IDs and reports producer entity states and
+consumer traversal cutoffs separately. See
+[ADR-0015](adr/0015-attach-semantic-facts-without-expanding-graph-identity.md).
+
 This remains a migration harness rather than a second semantic authority. The
 Go checker is the oracle. Categories may be mechanically ported where useful,
 compared against that oracle, and replaced one at a time only after their
