@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "module": "preserve"
+  },
+  "files": ["src/app.tsx", "src/values.ts"]
+}

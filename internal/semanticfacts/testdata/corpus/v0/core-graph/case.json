@@ -1,0 +1,45 @@
+{
+  "name": "core-graph",
+  "description": "Core composite shapes, aliases, classes, sharing, and recursion",
+  "coverage": [
+    "aliases",
+    "arrays",
+    "classes",
+    "interfaces",
+    "intersections",
+    "literals",
+    "objects",
+    "primitives",
+    "recursion",
+    "sharing",
+    "tuples",
+    "unions"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "graph.signatures",
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "selections": [
+    {
+      "file": "src/core.ts",
+      "text": "node",
+      "occurrence": 1,
+      "proves": "recursive interface use-site graph"
+    },
+    {
+      "file": "src/core.ts",
+      "text": "store",
+      "occurrence": 1,
+      "proves": "class instance and constructor graph"
+    },
+    {
+      "file": "src/core.ts",
+      "text": "literal",
+      "occurrence": 1,
+      "proves": "as-const object, array, tuple, and literal sharing"
+    }
+  ]
+}

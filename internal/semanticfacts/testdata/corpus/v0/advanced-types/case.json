@@ -1,0 +1,58 @@
+{
+  "name": "advanced-types",
+  "description": "Conditional, mapped, indexed-access, keyof, typeof, and template-literal graphs",
+  "coverage": [
+    "conditional-types",
+    "indexed-access",
+    "keyof",
+    "mapped-types",
+    "string-mapping",
+    "template-literal-types",
+    "typeof"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "graph.signatures",
+    "types.advanced",
+    "types.core-composite"
+  ],
+  "selections": [
+    {
+      "file": "src/advanced.ts",
+      "text": "Conditional",
+      "occurrence": 0,
+      "proves": "conditional detail and inferred type parameter"
+    },
+    {
+      "file": "src/advanced.ts",
+      "text": "Mapped",
+      "occurrence": 0,
+      "proves": "mapped modifiers, key remapping, and template type"
+    },
+    {
+      "file": "src/advanced.ts",
+      "text": "Indexed",
+      "occurrence": 0,
+      "proves": "indexed-access object and index roots"
+    },
+    {
+      "file": "src/advanced.ts",
+      "text": "Keys",
+      "occurrence": 0,
+      "proves": "keyof index graph"
+    },
+    {
+      "file": "src/advanced.ts",
+      "text": "Template",
+      "occurrence": 0,
+      "proves": "template-literal texts and string-mapping root"
+    },
+    {
+      "file": "src/advanced.ts",
+      "text": "Snapshot",
+      "occurrence": 0,
+      "proves": "typeof query over a const value"
+    }
+  ]
+}
