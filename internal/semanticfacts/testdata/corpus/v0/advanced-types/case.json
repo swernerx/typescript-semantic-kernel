@@ -17,6 +17,10 @@
     "types.advanced",
     "types.core-composite"
   ],
+  "budgets": {
+    "maxTypeNodes": 128,
+    "maxTypeDepth": 8
+  },
   "selections": [
     {
       "file": "src/advanced.ts",
