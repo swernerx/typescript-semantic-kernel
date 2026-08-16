@@ -100,29 +100,68 @@ type TupleTypeDetails struct {
 	Elements []TupleElementDetails `json:"elements"`
 }
 
+type ConditionalTypeDetails struct {
+	CheckType           TypeID   `json:"checkType"`
+	ExtendsType         TypeID   `json:"extendsType"`
+	TrueType            TypeID   `json:"trueType"`
+	FalseType           TypeID   `json:"falseType"`
+	InferTypeParameters []TypeID `json:"inferTypeParameters,omitzero"`
+	Distributive        bool     `json:"distributive,omitzero"`
+}
+
+type MappedTypeDetails struct {
+	TypeParameter    TypeID `json:"typeParameter"`
+	ConstraintType   TypeID `json:"constraintType"`
+	NameType         TypeID `json:"nameType,omitzero"`
+	TemplateType     TypeID `json:"templateType"`
+	ModifiersType    TypeID `json:"modifiersType,omitzero"`
+	ReadonlyModifier string `json:"readonlyModifier"`
+	OptionalModifier string `json:"optionalModifier"`
+}
+
+type IndexedAccessTypeDetails struct {
+	ObjectType TypeID `json:"objectType"`
+	IndexType  TypeID `json:"indexType"`
+}
+
+type TemplateLiteralTypeDetails struct {
+	Texts []string `json:"texts"`
+	Types []TypeID `json:"types"`
+}
+
+type SubstitutionTypeDetails struct {
+	BaseType   TypeID `json:"baseType"`
+	Constraint TypeID `json:"constraint"`
+}
+
 type TypeRecord struct {
-	Record              string            `json:"record"`
-	ID                  TypeID            `json:"id"`
-	TypeKind            string            `json:"typeKind"`
-	Display             string            `json:"display"`
-	Flags               []string          `json:"flags"`
-	Members             []TypeID          `json:"members,omitzero"`
-	Symbol              SymbolID          `json:"symbol,omitzero"`
-	Target              TypeID            `json:"target,omitzero"`
-	TypeArguments       []TypeID          `json:"typeArguments,omitzero"`
-	Constraint          TypeID            `json:"constraint,omitzero"`
-	Default             TypeID            `json:"default,omitzero"`
-	Properties          []SymbolID        `json:"properties,omitzero"`
-	CallSignatures      []SignatureID     `json:"callSignatures,omitzero"`
-	ConstructSignatures []SignatureID     `json:"constructSignatures,omitzero"`
-	IndexSignatures     []SignatureID     `json:"indexSignatures,omitzero"`
-	Literal             *LiteralValue     `json:"literal,omitzero"`
-	Array               *ArrayTypeDetails `json:"array,omitzero"`
-	Tuple               *TupleTypeDetails `json:"tuple,omitzero"`
-	State               string            `json:"state"`
-	Issues              []GraphIssue      `json:"issues,omitzero"`
-	Complete            bool              `json:"complete"`
-	Truncated           bool              `json:"truncated"`
+	Record              string                      `json:"record"`
+	ID                  TypeID                      `json:"id"`
+	TypeKind            string                      `json:"typeKind"`
+	Display             string                      `json:"display"`
+	Flags               []string                    `json:"flags"`
+	Members             []TypeID                    `json:"members,omitzero"`
+	Symbol              SymbolID                    `json:"symbol,omitzero"`
+	Target              TypeID                      `json:"target,omitzero"`
+	TypeArguments       []TypeID                    `json:"typeArguments,omitzero"`
+	Constraint          TypeID                      `json:"constraint,omitzero"`
+	Default             TypeID                      `json:"default,omitzero"`
+	Properties          []SymbolID                  `json:"properties,omitzero"`
+	CallSignatures      []SignatureID               `json:"callSignatures,omitzero"`
+	ConstructSignatures []SignatureID               `json:"constructSignatures,omitzero"`
+	IndexSignatures     []SignatureID               `json:"indexSignatures,omitzero"`
+	Literal             *LiteralValue               `json:"literal,omitzero"`
+	Array               *ArrayTypeDetails           `json:"array,omitzero"`
+	Tuple               *TupleTypeDetails           `json:"tuple,omitzero"`
+	Conditional         *ConditionalTypeDetails     `json:"conditional,omitzero"`
+	Mapped              *MappedTypeDetails          `json:"mapped,omitzero"`
+	IndexedAccess       *IndexedAccessTypeDetails   `json:"indexedAccess,omitzero"`
+	TemplateLiteral     *TemplateLiteralTypeDetails `json:"templateLiteral,omitzero"`
+	Substitution        *SubstitutionTypeDetails    `json:"substitution,omitzero"`
+	State               string                      `json:"state"`
+	Issues              []GraphIssue                `json:"issues,omitzero"`
+	Complete            bool                        `json:"complete"`
+	Truncated           bool                        `json:"truncated"`
 }
 
 type DeclarationRecord struct {

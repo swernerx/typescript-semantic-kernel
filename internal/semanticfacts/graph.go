@@ -13,10 +13,11 @@ func newGraphInterners(
 	files *fileRegistry,
 	limits BudgetLimits,
 	coreComposite bool,
+	advancedTypes bool,
 	references bool,
 	signatures bool,
 ) *graphInterners {
-	types := newTypeInterner(c, limits, coreComposite)
+	types := newTypeInterner(c, limits, coreComposite, advancedTypes)
 	symbols := newSymbolInterner(c, files, references || signatures)
 	signatureRecords := newSignatureInterner(c)
 	types.symbols = symbols
@@ -37,7 +38,7 @@ func (g *graphInterners) finalize(facts []FactRecord) {
 			if !record.Complete {
 				continue
 			}
-			if !g.allTypesComplete(appendTypeIDs(record.Members, record.Target, record.TypeArguments, record.Constraint, record.Default)) {
+			if !g.allTypesComplete(typeRecordTypeEdges(*record)) {
 				markTypeIncomplete(record, EntityStateTruncated, GraphIssue{Code: GraphIssueReferencedIncompleteType})
 				changed = true
 			}
@@ -112,6 +113,27 @@ func (g *graphInterners) finalize(facts []FactRecord) {
 			g.types.complete(fact.ConstraintType) &&
 			g.symbols.complete(fact.Symbol)
 	}
+}
+
+func typeRecordTypeEdges(record TypeRecord) []TypeID {
+	edges := appendTypeIDs(record.Members, record.Target, record.TypeArguments, record.Constraint, record.Default)
+	if details := record.Conditional; details != nil {
+		edges = append(edges, details.CheckType, details.ExtendsType, details.TrueType, details.FalseType)
+		edges = append(edges, details.InferTypeParameters...)
+	}
+	if details := record.Mapped; details != nil {
+		edges = append(edges, details.TypeParameter, details.ConstraintType, details.NameType, details.TemplateType, details.ModifiersType)
+	}
+	if details := record.IndexedAccess; details != nil {
+		edges = append(edges, details.ObjectType, details.IndexType)
+	}
+	if details := record.TemplateLiteral; details != nil {
+		edges = append(edges, details.Types...)
+	}
+	if details := record.Substitution; details != nil {
+		edges = append(edges, details.BaseType, details.Constraint)
+	}
+	return edges
 }
 
 func (g *graphInterners) allTypesComplete(ids []TypeID) bool {

@@ -16,6 +16,7 @@ const (
 	CapabilityOccurrenceViews    = "occurrence.type-views"
 	CapabilityExplicitStates     = "protocol.explicit-states"
 	CapabilityCanonicalFixtures  = "protocol.fixtures.v0"
+	CapabilityAdvancedTypes      = "types.advanced"
 	CapabilityCoreCompositeTypes = "types.core-composite"
 
 	GraphIssueCheckerError                  = "checker-error"
@@ -24,6 +25,7 @@ const (
 	GraphIssueReferencedIncompleteSignature = "referenced-incomplete-signature"
 	GraphIssueReferencedIncompleteSymbol    = "referenced-incomplete-symbol"
 	GraphIssueReferencedIncompleteType      = "referenced-incomplete-type"
+	GraphIssueMissingTypeEdge               = "missing-type-edge"
 	GraphIssueUnsupportedStructure          = "unsupported-structure"
 	GraphIssueUnsupportedTypeForm           = "unsupported-type-form"
 	GraphIssueUnrepresentableDecl           = "unrepresentable-declaration"
@@ -39,6 +41,7 @@ var supportedCapabilities = []string{
 	CapabilityOccurrenceViews,
 	CapabilityExplicitStates,
 	CapabilityCanonicalFixtures,
+	CapabilityAdvancedTypes,
 	CapabilityCoreCompositeTypes,
 }
 

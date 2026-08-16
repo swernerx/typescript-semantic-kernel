@@ -55,6 +55,71 @@ func TestValidateResultRejectsInvalidTupleShape(t *testing.T) {
 	assert.ErrorContains(t, err, `element 0 has unknown kind "future-element"`)
 }
 
+func TestValidateResultRejectsDanglingAdvancedTypeEdge(t *testing.T) {
+	t.Parallel()
+	result := cyclicGraphResult()
+	result.Types[0].TypeKind = "conditional"
+	result.Types[0].Properties = nil
+	result.Types[0].Conditional = &tsfacts.ConditionalTypeDetails{
+		CheckType:   "type:1",
+		ExtendsType: "type:2",
+		TrueType:    "type:999",
+		FalseType:   "type:3",
+	}
+
+	err := tsfacts.ValidateResult(result)
+	assert.ErrorContains(t, err, `type type:1 references missing type "type:999"`)
+}
+
+func TestValidateResultRejectsInvalidAdvancedTypeShapes(t *testing.T) {
+	t.Parallel()
+	t.Run("template placeholder alignment", func(t *testing.T) {
+		t.Parallel()
+		result := cyclicGraphResult()
+		result.Types[0].TypeKind = "template_literal"
+		result.Types[0].Properties = nil
+		result.Types[0].TemplateLiteral = &tsfacts.TemplateLiteralTypeDetails{
+			Texts: []string{"prefix"},
+			Types: []tsfacts.TypeID{"type:2"},
+		}
+
+		err := tsfacts.ValidateResult(result)
+		assert.ErrorContains(t, err, `requires one more text than type placeholder`)
+	})
+
+	t.Run("mapped modifier", func(t *testing.T) {
+		t.Parallel()
+		result := cyclicGraphResult()
+		result.Types[0].TypeKind = "mapped"
+		result.Types[0].Properties = nil
+		result.Types[0].Mapped = &tsfacts.MappedTypeDetails{
+			TypeParameter:    "type:3",
+			ConstraintType:   "type:1",
+			TemplateType:     "type:2",
+			ReadonlyModifier: "future",
+			OptionalModifier: "preserve",
+		}
+
+		err := tsfacts.ValidateResult(result)
+		assert.ErrorContains(t, err, `has invalid modifiers`)
+	})
+
+	t.Run("missing edge without issue", func(t *testing.T) {
+		t.Parallel()
+		result := cyclicGraphResult()
+		result.Types[0].TypeKind = "indexed_access"
+		result.Types[0].Properties = nil
+		result.Types[0].State = tsfacts.EntityStateTruncated
+		result.Types[0].Issues = []tsfacts.GraphIssue{{Code: tsfacts.GraphIssueReferencedIncompleteType}}
+		result.Types[0].Complete = false
+		result.Types[0].Truncated = true
+		result.Types[0].IndexedAccess = &tsfacts.IndexedAccessTypeDetails{ObjectType: "type:1"}
+
+		err := tsfacts.ValidateResult(result)
+		assert.ErrorContains(t, err, `without "missing-type-edge"`)
+	})
+}
+
 func TestValidateResultRejectsIndexSignatureWithoutKeyType(t *testing.T) {
 	t.Parallel()
 	result := cyclicGraphResult()

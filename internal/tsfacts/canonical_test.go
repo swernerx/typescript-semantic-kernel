@@ -45,8 +45,8 @@ func TestReadJSONLinesAcceptsAdditiveFieldsAndCapabilities(t *testing.T) {
 	assert.NilError(t, readErr)
 	fixture = bytes.Replace(
 		fixture,
-		[]byte(`"protocol.fixtures.v0","types.core-composite"]`),
-		[]byte(`"protocol.fixtures.v0","protocol.future","types.core-composite"]`),
+		[]byte(`"protocol.fixtures.v0","types.advanced","types.core-composite"]`),
+		[]byte(`"protocol.fixtures.v0","protocol.future","types.advanced","types.core-composite"]`),
 		1,
 	)
 	fixture = bytes.Replace(

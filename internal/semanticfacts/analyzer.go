@@ -147,6 +147,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		files,
 		limits,
 		slices.Contains(request.RequiredCapabilities, CapabilityCoreCompositeTypes),
+		slices.Contains(request.RequiredCapabilities, CapabilityAdvancedTypes),
 		slices.Contains(request.RequiredCapabilities, CapabilityGraphReferences),
 		slices.Contains(request.RequiredCapabilities, CapabilityGraphSignatures),
 	)

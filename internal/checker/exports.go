@@ -189,6 +189,53 @@ func (c *Checker) GetFalseTypeOfConditionalType(t *Type) *Type {
 	return c.getFalseTypeFromConditionalType(t)
 }
 
+type SemanticConditionalTypeDetails struct {
+	InferTypeParameters []*Type
+	Distributive        bool
+}
+
+func (c *Checker) GetSemanticConditionalTypeDetails(t *Type) SemanticConditionalTypeDetails {
+	root := t.AsConditionalType().root
+	return SemanticConditionalTypeDetails{
+		InferTypeParameters: append([]*Type(nil), root.inferTypeParameters...),
+		Distributive:        root.isDistributive,
+	}
+}
+
+type SemanticMappedTypeDetails struct {
+	TypeParameter    *Type
+	ConstraintType   *Type
+	NameType         *Type
+	TemplateType     *Type
+	ModifiersType    *Type
+	ReadonlyModifier string
+	OptionalModifier string
+}
+
+func (c *Checker) GetSemanticMappedTypeDetails(t *Type) SemanticMappedTypeDetails {
+	modifiers := getMappedTypeModifiers(t)
+	return SemanticMappedTypeDetails{
+		TypeParameter:    c.getTypeParameterFromMappedType(t),
+		ConstraintType:   c.getConstraintTypeFromMappedType(t),
+		NameType:         c.getNameTypeFromMappedType(t),
+		TemplateType:     c.getTemplateTypeFromMappedType(t),
+		ModifiersType:    c.getModifiersTypeFromMappedType(t),
+		ReadonlyModifier: formatMappedModifier(modifiers, MappedTypeModifiersIncludeReadonly, MappedTypeModifiersExcludeReadonly),
+		OptionalModifier: formatMappedModifier(modifiers, MappedTypeModifiersIncludeOptional, MappedTypeModifiersExcludeOptional),
+	}
+}
+
+func formatMappedModifier(modifiers MappedTypeModifiers, include MappedTypeModifiers, exclude MappedTypeModifiers) string {
+	switch {
+	case modifiers&include != 0:
+		return "add"
+	case modifiers&exclude != 0:
+		return "remove"
+	default:
+		return "preserve"
+	}
+}
+
 func (c *Checker) GetDefaultFromTypeParameter(typeParameter *Type) *Type {
 	return c.getDefaultFromTypeParameter(typeParameter)
 }
