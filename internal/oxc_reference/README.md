@@ -22,12 +22,40 @@ cargo run --locked --manifest-path internal/oxc_reference/Cargo.toml \
   --bin oxc-occurrence-map -- fixtures
 ```
 
+Inspect a single-file semantic-facts response against its source with:
+
+```sh
+cargo run --locked --manifest-path internal/oxc_reference/Cargo.toml \
+  --bin oxc-occurrence-map -- inspect snapshot.jsonl source.ts src/source.ts
+```
+
+The optional final argument overrides the normalized logical file ID used by
+the semantic response. A single-file snapshot otherwise supplies that ID from
+its first fact.
+
 The first test suite applies the Rust implementation of the portable contract
 to every shared JSON fixture in `internal/occurrencemap/testdata/v1` and checks
 its complete expected report. It separately parses those fixture sources with
 OXC and verifies that emitted mappings resolve back to typed, arena-local
 `NodeId`s. The command prints OXC-produced mappings, unmapped/ambiguity
 diagnostics, and integer coverage counters grouped by semantic syntax kind.
+
+## TypeFacts attachment and graph inspection
+
+The consumer can decode schema-v1 JSON Lines into one shared, immutable
+`TypeGraph`, correlate its occurrence facts, and index successful attachments
+by typed OXC `NodeId`. The side table stores fact indices in response order, so
+repeated selections are retained. Each attachment exposes effective actual,
+contextual, widened, apparent, and declared roots; `same-as-actual` resolves to
+the actual TypeID without hiding the view state.
+
+Inspection output is pretty-printed deterministic JSON. Roots and edges retain
+response-local IDs, each graph identity is emitted once, and recursive graphs
+are not expanded into trees. Fact/entity completeness, issue codes,
+unsupported and truncated states, unavailable views, and correlation
+diagnostics remain visible. Depth, node, and edge budgets are consumer-local
+guards and do not rewrite or reinterpret producer records. See
+[ADR-0015](../../docs/adr/0015-attach-semantic-facts-without-expanding-graph-identity.md).
 
 ## Migration boundary
 
