@@ -1,4 +1,5 @@
 import {
+    CancellationTokenSource,
     createMessageConnection,
     type MessageConnection,
     RequestType,
@@ -162,7 +163,7 @@ export class Client {
         }
     }
 
-    async apiRequest<T>(method: string, params?: unknown): Promise<T> {
+    async apiRequest<T>(method: string, params?: unknown, signal?: AbortSignal): Promise<T> {
         if (!this.connected) {
             await this.connect();
         }
@@ -171,8 +172,26 @@ export class Client {
         }
 
         const requestType = new RequestType<unknown, T, void>(method);
+        const send = async (): Promise<T> => {
+            if (!signal) {
+                return this.connection!.sendRequest(requestType, params);
+            }
+            if (signal.aborted) {
+                throw new DOMException("The API request was aborted", "AbortError");
+            }
+            const cancellation = new CancellationTokenSource();
+            const abort = () => cancellation.cancel();
+            signal.addEventListener("abort", abort, { once: true });
+            try {
+                return await this.connection!.sendRequest(requestType, params, cancellation.token);
+            }
+            finally {
+                signal.removeEventListener("abort", abort);
+                cancellation.dispose();
+            }
+        };
         if (!this.timing) {
-            return this.connection.sendRequest(requestType, params);
+            return send();
         }
 
         // Round-trip latency is measured here; byte counts approximate the wire
@@ -181,7 +200,7 @@ export class Client {
         // getServerTiming request) and folded in by getTimingInfo().
         const bytesSent = params === undefined ? 0 : Buffer.byteLength(JSON.stringify(params), "utf-8");
         const start = performance.now();
-        const result = await this.connection.sendRequest(requestType, params);
+        const result = await send();
         const roundTripMs = performance.now() - start;
         this.timing.record({
             method,

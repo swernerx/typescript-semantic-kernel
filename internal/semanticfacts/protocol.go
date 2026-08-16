@@ -241,11 +241,11 @@ type FactRecord struct {
 }
 
 type Result struct {
-	Header       HeaderRecord
-	Files        []FileRecord
-	Types        []TypeRecord
-	Declarations []DeclarationRecord
-	Symbols      []SymbolRecord
-	Signatures   []SignatureRecord
-	Facts        []FactRecord
+	Header       HeaderRecord        `json:"header"`
+	Files        []FileRecord        `json:"files"`
+	Types        []TypeRecord        `json:"types"`
+	Declarations []DeclarationRecord `json:"declarations"`
+	Symbols      []SymbolRecord      `json:"symbols"`
+	Signatures   []SignatureRecord   `json:"signatures"`
+	Facts        []FactRecord        `json:"facts"`
 }

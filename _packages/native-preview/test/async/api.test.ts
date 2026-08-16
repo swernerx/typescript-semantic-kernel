@@ -432,6 +432,58 @@ describe("Snapshot", () => {
         }
     });
 
+    // @sync-skip-block-start
+    test("getSemanticSnapshot uses the pinned project snapshot", async () => {
+        const baseText = `export const value = 1;`;
+        const api = spawnAPI({
+            "/tsconfig.json": JSON.stringify({ compilerOptions: { strict: true } }),
+            "/src/index.ts": baseText,
+        });
+        try {
+            const snapshot = await api.updateSnapshot({ openProject: "/tsconfig.json" });
+            const project = snapshot.getProject("/tsconfig.json")!;
+            const selection = rangeOf(baseText, "value");
+            const request = {
+                schemaVersion: 1 as const,
+                files: ["src/index.ts"],
+                selections: [{ file: "src/index.ts", start: selection.pos, end: selection.end }],
+            };
+            const first = await project.getSemanticSnapshot(request);
+            const second = await project.getSemanticSnapshot(request);
+            assert.deepEqual(second, first, "repeated snapshots must be deterministic");
+            assert.equal(first.header.schemaVersion, 1);
+            assert.equal(first.header.offsetEncoding, "utf8-bytes");
+            assert.equal(first.facts.length, 1);
+
+            const actualDisplay = (snapshot: typeof first): string => {
+                const actualType = snapshot.facts[0].actualType;
+                const record = snapshot.types.find(type => type.id === actualType);
+                assert.ok(record);
+                return record.display;
+            };
+            const baseDisplay = actualDisplay(first);
+            await api.runWithTemporaryFileUpdate(snapshot, "/src/index.ts", `export const value = "changed";`, async temporarySnapshot => {
+                const temporaryProject = temporarySnapshot.getProject("/tsconfig.json")!;
+                const temporary = await temporaryProject.getSemanticSnapshot(request);
+                assert.notEqual(actualDisplay(temporary), baseDisplay);
+            });
+            assert.equal(actualDisplay(await project.getSemanticSnapshot(request)), baseDisplay);
+
+            await assert.rejects(
+                project.getSemanticSnapshot({ schemaVersion: 1, files: ["src/missing.ts"] }),
+                /source file "src\/missing\.ts" is not part of project/,
+            );
+
+            const controller = new AbortController();
+            controller.abort();
+            await assert.rejects(project.getSemanticSnapshot(request, controller.signal));
+        }
+        finally {
+            await api.close();
+        }
+    });
+    // @sync-skip-block-end
+
     test("getSymbolAtPosition", async () => {
         const api = spawnAPI();
         try {

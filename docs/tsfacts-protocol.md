@@ -3,6 +3,28 @@
 `tsfacts` is the first process boundary for RFC 0001. It reads one schema-v1
 request from standard input and writes JSON Lines to standard output.
 
+The same schema is available through the asynchronous TypeScript 7 API without
+the JSON Lines transport. It uses the caller's pinned project snapshot:
+
+```ts
+const snapshot = await api.updateSnapshot({ openProject: "tsconfig.json" });
+const project = snapshot.getProject("tsconfig.json")!;
+const facts = await project.getSemanticSnapshot({
+    schemaVersion: 1,
+    requiredCapabilities: ["occurrence.file-wide", "types.core-composite"],
+    files: ["src/example.ts"],
+}, abortController.signal);
+```
+
+The method returns one object with ordered `header`, `files`, `types`,
+`declarations`, `symbols`, `signatures`, and `facts` arrays. Its file names and
+selection offsets have the same project-relative and UTF-8-byte semantics as
+the process request. A command-line example can be run after building `tsgo`:
+
+```sh
+npm run -w @typescript/native-preview example:semantic-snapshot -- tsconfig.json src/example.ts
+```
+
 ```sh
 go run ./cmd/tsfacts <<'JSON'
 {"schemaVersion":1,"requiredCapabilities":["limits.type-graph","protocol.explicit-states"],"budgets":{"maxTypeNodes":4096,"maxTypeDepth":32},"project":"tsconfig.json","files":["src/example.ts"],"selections":[{"file":"src/example.ts","start":120,"end":125}]}

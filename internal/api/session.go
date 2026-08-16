@@ -28,6 +28,7 @@ import (
 	"github.com/microsoft/typescript-go/internal/pprof"
 	"github.com/microsoft/typescript-go/internal/printer"
 	"github.com/microsoft/typescript-go/internal/project"
+	"github.com/microsoft/typescript-go/internal/semanticfacts"
 	"github.com/microsoft/typescript-go/internal/transpile"
 	"github.com/microsoft/typescript-go/internal/tsoptions"
 	"github.com/microsoft/typescript-go/internal/tspath"
@@ -623,6 +624,8 @@ func (s *Session) HandleRequest(ctx context.Context, method string, params json.
 		return s.handleTranspileFromFile(ctx, parsed.(*TranspileFromFileParams), true)
 	case string(MethodGetDefaultProjectForFile):
 		return s.handleGetDefaultProjectForFile(ctx, parsed.(*GetDefaultProjectForFileParams))
+	case string(MethodGetSemanticSnapshot):
+		return s.handleGetSemanticSnapshot(ctx, parsed.(*GetSemanticSnapshotParams))
 	case string(MethodGetSourceFile):
 		return s.handleGetSourceFile(ctx, parsed.(*GetSourceFileParams))
 	case string(MethodGetSourceFileNames):
@@ -1142,6 +1145,22 @@ func (s *Session) handleGetDefaultProjectForFile(ctx context.Context, params *Ge
 	}
 
 	return NewProjectResponse(proj), nil
+}
+
+func (s *Session) handleGetSemanticSnapshot(ctx context.Context, params *GetSemanticSnapshotParams) (*semanticfacts.Result, error) {
+	sd, err := s.getSnapshotData(params.Snapshot)
+	if err != nil {
+		return nil, err
+	}
+	program, err := sd.getProgram(params.Project)
+	if err != nil {
+		return nil, err
+	}
+	result, err := semanticfacts.AnalyzeProgram(ctx, program, params.semanticRequest())
+	if err != nil {
+		return nil, fmt.Errorf("%w: build semantic snapshot: %w", ErrClientError, err)
+	}
+	return result, nil
 }
 
 // handleParseCommandLine parses command-line arguments.
