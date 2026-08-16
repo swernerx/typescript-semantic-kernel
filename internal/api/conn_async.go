@@ -31,6 +31,8 @@ type AsyncConn struct {
 	pending   map[jsonrpc.ID]chan *Message
 	pendingMu sync.Mutex
 	writeMu   sync.Mutex
+	active    map[string]context.CancelFunc
+	activeMu  sync.Mutex
 }
 
 // NewAsyncConn creates a new async connection with the given transport and handler.
@@ -46,6 +48,7 @@ func NewAsyncConnWithProtocol(rwc io.ReadWriteCloser, protocol Protocol, handler
 		protocol: protocol,
 		handler:  handler,
 		pending:  make(map[jsonrpc.ID]chan *Message),
+		active:   make(map[string]context.CancelFunc),
 	}
 }
 
@@ -79,10 +82,49 @@ func (c *AsyncConn) Run(ctx context.Context) error {
 		if msg.IsResponse() {
 			c.handleResponse(msg)
 		} else if msg.IsRequest() {
-			go c.handleRequest(ctx, msg)
+			c.startRequest(ctx, msg)
 		} else if msg.IsNotification() {
-			go c.handleNotification(ctx, msg)
+			if msg.Method == "$/cancelRequest" {
+				c.cancelRequest(msg.Params)
+			} else {
+				go c.handleNotification(ctx, msg)
+			}
 		}
+	}
+}
+
+func requestKey(id *jsonrpc.ID) string {
+	data, err := id.MarshalJSON()
+	if err != nil {
+		panic(fmt.Sprintf("api: failed to encode request ID: %v", err))
+	}
+	return string(data)
+}
+
+func (c *AsyncConn) startRequest(ctx context.Context, msg *Message) {
+	requestCtx, cancel := context.WithCancel(ctx)
+	key := requestKey(msg.ID)
+	c.activeMu.Lock()
+	c.active[key] = cancel
+	c.activeMu.Unlock()
+	go c.handleRequest(requestCtx, msg, key, cancel)
+}
+
+func (c *AsyncConn) cancelRequest(params json.Value) {
+	var payload struct {
+		ID *jsonrpc.ID `json:"id"`
+	}
+	if err := json.Unmarshal(params, &payload); err != nil {
+		return
+	}
+	if payload.ID == nil {
+		return
+	}
+	c.activeMu.Lock()
+	cancel := c.active[requestKey(payload.ID)]
+	c.activeMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
@@ -102,7 +144,14 @@ func (c *AsyncConn) handleResponse(msg *Message) {
 }
 
 // handleRequest processes an incoming request.
-func (c *AsyncConn) handleRequest(ctx context.Context, msg *Message) {
+func (c *AsyncConn) handleRequest(ctx context.Context, msg *Message, key string, cancel context.CancelFunc) {
+	defer func() {
+		cancel()
+		c.activeMu.Lock()
+		delete(c.active, key)
+		c.activeMu.Unlock()
+	}()
+
 	// Intercept the meta-requests for collected server timing before dispatching
 	// to the handler, so they are answered directly and not themselves recorded.
 	switch msg.Method {
@@ -165,8 +214,12 @@ func (c *AsyncConn) handleRequest(ctx context.Context, msg *Message) {
 
 	var writeErr error
 	if err != nil {
+		code := jsonrpc.CodeInternalError
+		if errors.Is(err, context.Canceled) {
+			code = -32800 // LSP/JSON-RPC request cancelled
+		}
 		writeErr = c.protocol.WriteError(msg.ID, &jsonrpc.ResponseError{
-			Code:    jsonrpc.CodeInternalError,
+			Code:    code,
 			Message: err.Error(),
 		})
 	} else {

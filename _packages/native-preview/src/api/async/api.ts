@@ -128,10 +128,17 @@ import type {
     UnionOrIntersectionType,
     UnionType,
 } from "./types.ts";
+// @sync-skip-block-start
+import type {
+    SemanticSnapshot,
+    SemanticSnapshotRequest,
+} from "../semanticFacts.ts";
+// @sync-skip-block-end
 
 export { documentURIToFileName, fileNameToDocumentURI } from "../path.ts";
 export { CheckFlags, CompletionItemKind, DiagnosticCategory, ElementFlags, EmitOnly, ModifierFlags, ModuleKind, NodeBuilderFlags, ObjectFlags, SignatureFlags, SignatureKind, SymbolFlags, TypeFlags, TypePredicateKind };
 export type { APIOptions, AssertsIdentifierTypePredicate, AssertsThisTypePredicate, BigIntLiteralType, BooleanLiteralType, ClientSocketOptions, ClientSpawnOptions, CompilerOptions, CompletionEntry, CompletionInfo, CompletionOptions, ConditionalType, Diagnostic, DocumentIdentifier, DocumentPosition, EmitOutput, EmitOutputFile, EmitResult, FreshableType, GetImportEditsForSymbolsOptions, IdentifierTypePredicate, ImportAdderAction, IndexedAccessType, IndexInfo, IndexType, InterfaceType, IntersectionType, IntrinsicType, JSDocTagInfo, LiteralType, LSPConnectionOptions, NumberLiteralType, ObjectType, ParsedCommandLine, ProjectReference, ReadConfigFileResult, RequestTiming, SourceFileMetadata, StringLiteralType, StringMappingType, SubstitutionType, TemplateLiteralType, TextEdit, ThisTypePredicate, TimingAccumulators, TimingInfo, TupleType, Type, TypeAcquisition, TypeParameter, TypePredicate, TypePredicateBase, TypeReference, UnionOrIntersectionType, UnionType };
+export type * from "../semanticFacts.ts"; // @sync-skip
 
 interface EmitOutputResponse {
     readonly emitSkipped: boolean;
@@ -771,6 +778,21 @@ export class Project {
     getImportEditsForSymbols(file: DocumentIdentifier, symbols: readonly Symbol[], options: GetImportEditsForSymbolsOptions = {}): Promise<readonly TextEdit[]> {
         return this.languageService.getImportEditsForSymbols(file, symbols, options);
     }
+
+    // @sync-skip-block-start
+    /**
+     * Builds the versioned semantic-facts envelope from this project's pinned
+     * snapshot. File names and selection offsets follow the schema-v1 contract
+     * and use project-relative paths and UTF-8 byte offsets.
+     */
+    getSemanticSnapshot(request: SemanticSnapshotRequest, signal?: AbortSignal): Promise<SemanticSnapshot> {
+        return this.client.apiRequest<SemanticSnapshot>("getSemanticSnapshot", {
+            snapshot: this.snapshotId,
+            project: this.id,
+            ...request,
+        }, signal);
+    }
+    // @sync-skip-block-end
 
     dispose(): void {
         this.checker.dispose();

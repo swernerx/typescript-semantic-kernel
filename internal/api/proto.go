@@ -16,6 +16,7 @@ import (
 	"github.com/microsoft/typescript-go/internal/lsp/lsproto"
 	"github.com/microsoft/typescript-go/internal/packagejson"
 	"github.com/microsoft/typescript-go/internal/project"
+	"github.com/microsoft/typescript-go/internal/semanticfacts"
 	"github.com/microsoft/typescript-go/internal/tsoptions"
 	"github.com/microsoft/typescript-go/internal/tspath"
 )
@@ -82,6 +83,7 @@ const (
 	MethodTranspileDeclaration         Method = "transpileDeclaration"
 	MethodTranspileDeclarationFromFile Method = "transpileDeclarationFromFile"
 	MethodGetDefaultProjectForFile     Method = "getDefaultProjectForFile"
+	MethodGetSemanticSnapshot          Method = "getSemanticSnapshot"
 	MethodGetSymbolAtPosition          Method = "getSymbolAtPosition"
 	MethodGetSymbolsAtPositions        Method = "getSymbolsAtPositions"
 	MethodGetSymbolAtLocation          Method = "getSymbolAtLocation"
@@ -407,6 +409,7 @@ var unmarshalers = map[Method]func([]byte) (any, error){
 	MethodTranspileDeclaration:         unmarshallerFor[TranspileParams],
 	MethodTranspileDeclarationFromFile: unmarshallerFor[TranspileFromFileParams],
 	MethodGetDefaultProjectForFile:     unmarshallerFor[GetDefaultProjectForFileParams],
+	MethodGetSemanticSnapshot:          unmarshallerFor[GetSemanticSnapshotParams],
 	MethodGetSourceFile:                unmarshallerFor[GetSourceFileParams],
 	MethodGetSourceFileNames:           unmarshallerFor[GetSourceFileNamesParams],
 	MethodGetSourceFileMetadata:        unmarshallerFor[GetSourceFileParams],
@@ -628,6 +631,29 @@ type ReadConfigFileResponse struct {
 type GetDefaultProjectForFileParams struct {
 	Snapshot SnapshotID         `json:"snapshot"`
 	File     DocumentIdentifier `json:"file"`
+}
+
+// GetSemanticSnapshotParams identifies a pinned API project snapshot and the
+// transport-neutral semantic-facts scope to export from it.
+type GetSemanticSnapshotParams struct {
+	Snapshot             SnapshotID                 `json:"snapshot"`
+	Project              ProjectID                  `json:"project"`
+	SchemaVersion        int                        `json:"schemaVersion"`
+	RequiredCapabilities []string                   `json:"requiredCapabilities,omitzero"`
+	Budgets              semanticfacts.BudgetLimits `json:"budgets,omitzero"`
+	Files                []string                   `json:"files,omitzero"`
+	Selections           []semanticfacts.Selection  `json:"selections"`
+}
+
+func (p *GetSemanticSnapshotParams) semanticRequest() semanticfacts.Request {
+	return semanticfacts.Request{
+		SchemaVersion:        p.SchemaVersion,
+		RequiredCapabilities: p.RequiredCapabilities,
+		Budgets:              p.Budgets,
+		Project:              string(p.Project),
+		Files:                p.Files,
+		Selections:           p.Selections,
+	}
 }
 
 type ProjectResponse struct {

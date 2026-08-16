@@ -31,10 +31,7 @@ type selectedFile struct {
 }
 
 func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Result, error) {
-	if err := validateRequest(request); err != nil {
-		return nil, err
-	}
-	limits, err := normalizeBudgetLimits(request.Budgets)
+	limits, err := prepareAnalysis(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +44,6 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		return nil, fmt.Errorf("current directory %q must be an absolute disk path", options.CurrentDirectory)
 	}
 	projectPath := tspath.GetNormalizedAbsolutePath(request.Project, currentDirectory)
-	projectRoot := tspath.GetDirectoryPath(projectPath)
 	host := compiler.NewCompilerHost(currentDirectory, options.FS, options.DefaultLibraryPath, nil, nil)
 	parsed, configErrors := tsoptions.GetParsedCommandLineOfConfigFile(projectPath, &core.CompilerOptions{}, nil, host, nil)
 	if len(configErrors) != 0 {
@@ -56,8 +52,52 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 
 	program := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: host})
 	program.BindSourceFiles()
+	return analyzeProgram(ctx, program, projectPath, parsed.CompilerOptions(), options.FS, limits, request)
+}
 
-	allowedFiles, allowedFilesErr := normalizeAllowedFiles(request.Files, projectRoot, options.FS)
+// AnalyzeProgram builds semantic facts from an existing compiler program. The
+// caller retains ownership of the program and checker lifecycle. API sessions
+// use this entry point so facts observe the exact pinned project snapshot,
+// including unsaved overlays and temporary file updates.
+func AnalyzeProgram(ctx context.Context, program *compiler.Program, request Request) (*Result, error) {
+	limits, err := prepareAnalysis(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if program == nil {
+		return nil, errors.New("program is required")
+	}
+	currentDirectory := tspath.NormalizePath(program.GetCurrentDirectory())
+	if !tspath.IsRootedDiskPath(currentDirectory) {
+		return nil, fmt.Errorf("current directory %q must be an absolute disk path", program.GetCurrentDirectory())
+	}
+	projectPath := tspath.GetNormalizedAbsolutePath(request.Project, currentDirectory)
+	return analyzeProgram(ctx, program, projectPath, program.Options(), program.Host().FS(), limits, request)
+}
+
+func prepareAnalysis(ctx context.Context, request Request) (BudgetLimits, error) {
+	if err := ctx.Err(); err != nil {
+		return BudgetLimits{}, err
+	}
+	if err := validateRequest(request); err != nil {
+		return BudgetLimits{}, err
+	}
+	return normalizeBudgetLimits(request.Budgets)
+}
+
+func analyzeProgram(
+	ctx context.Context,
+	program *compiler.Program,
+	projectPath string,
+	compilerOptions any,
+	fs vfs.FS,
+	limits BudgetLimits,
+	request Request,
+) (*Result, error) {
+	currentDirectory := tspath.NormalizePath(program.GetCurrentDirectory())
+	projectRoot := tspath.GetDirectoryPath(projectPath)
+
+	allowedFiles, allowedFilesErr := normalizeAllowedFiles(request.Files, projectRoot, fs)
 	if allowedFilesErr != nil {
 		return nil, allowedFilesErr
 	}
@@ -67,11 +107,11 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		selected  *selectedFile
 	}, 0, len(request.Selections))
 	resolveFile := func(fileName string) (*selectedFile, error) {
-		absolute, _, identityErr := normalizeSourceIdentity(fileName, projectRoot, options.FS)
+		absolute, _, identityErr := normalizeSourceIdentity(fileName, projectRoot, fs)
 		if identityErr != nil {
 			return nil, identityErr
 		}
-		path := tspath.ToPath(absolute, projectRoot, options.FS.UseCaseSensitiveFileNames())
+		path := tspath.ToPath(absolute, projectRoot, fs.UseCaseSensitiveFileNames())
 		if entry := selected[path]; entry != nil {
 			return entry, nil
 		}
@@ -79,7 +119,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		if file == nil {
 			return nil, fmt.Errorf("source file %q is not part of project %q", fileName, request.Project)
 		}
-		_, id, canonicalIdentityErr := normalizeSourceIdentity(file.FileName(), projectRoot, options.FS)
+		_, id, canonicalIdentityErr := normalizeSourceIdentity(file.FileName(), projectRoot, fs)
 		if canonicalIdentityErr != nil {
 			return nil, canonicalIdentityErr
 		}
@@ -96,11 +136,11 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		}
 	} else {
 		for _, selection := range request.Selections {
-			absolute, _, identityErr := normalizeSourceIdentity(selection.File, projectRoot, options.FS)
+			absolute, _, identityErr := normalizeSourceIdentity(selection.File, projectRoot, fs)
 			if identityErr != nil {
 				return nil, identityErr
 			}
-			path := tspath.ToPath(absolute, projectRoot, options.FS.UseCaseSensitiveFileNames())
+			path := tspath.ToPath(absolute, projectRoot, fs.UseCaseSensitiveFileNames())
 			if len(allowedFiles) != 0 {
 				if _, ok := allowedFiles[path]; !ok {
 					return nil, fmt.Errorf("selection file %q is not present in files", selection.File)
@@ -118,8 +158,11 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 	}
 
 	diagnosticCount := 0
-	files := newFileRegistry(program, projectRoot, options.FS)
+	files := newFileRegistry(program, projectRoot, fs)
 	for _, entry := range selected {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		entry.diagnosticCount = len(program.GetSyntacticDiagnostics(ctx, entry.file)) + len(program.GetSemanticDiagnostics(ctx, entry.file))
 		diagnosticCount += entry.diagnosticCount
 		files.addSelected(entry.file, entry.id, entry.diagnosticCount)
@@ -134,6 +177,9 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 		}
 		sort.Slice(fileWideEntries, func(left, right int) bool { return fileWideEntries[left].id < fileWideEntries[right].id })
 		for _, entry := range fileWideEntries {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			for _, selection := range enumerateSemanticSelections(c, entry) {
 				resolvedSelections = append(resolvedSelections, struct {
 					selection Selection
@@ -153,6 +199,9 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 	)
 	facts := make([]FactRecord, 0, len(resolvedSelections))
 	for _, resolved := range resolvedSelections {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		fact, factErr := analyzeSelection(c, graph.types, graph.symbols, resolved.selected, resolved.selection)
 		if factErr != nil {
 			return nil, factErr
@@ -161,7 +210,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 	}
 	graph.finalize(facts)
 
-	projectID, projectIdentityErr := projectIdentity(projectPath, currentDirectory, options.FS)
+	projectID, projectIdentityErr := projectIdentity(projectPath, currentDirectory, fs)
 	if projectIdentityErr != nil {
 		return nil, projectIdentityErr
 	}
@@ -175,7 +224,7 @@ func Analyze(ctx context.Context, options AnalyzerOptions, request Request) (*Re
 			Capabilities:       SupportedCapabilities(),
 			Budgets:            graph.types.budgetReport(),
 			Project:            projectID,
-			CompilerOptions:    parsed.CompilerOptions(),
+			CompilerOptions:    compilerOptions,
 			DiagnosticCount:    diagnosticCount,
 		},
 		Files:        files.records(),
