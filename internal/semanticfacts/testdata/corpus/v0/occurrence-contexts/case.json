@@ -18,6 +18,10 @@
     "occurrence.type-views",
     "types.core-composite"
   ],
+  "budgets": {
+    "maxTypeNodes": 128,
+    "maxTypeDepth": 8
+  },
   "selections": [
     {
       "file": "src/app.tsx",
@@ -40,7 +44,7 @@
     {
       "file": "src/app.tsx",
       "text": "value",
-      "occurrence": 2,
+      "occurrence": 3,
       "proves": "typeof control-flow narrowing in a return expression"
     },
     {
@@ -48,6 +52,12 @@
       "text": "contextual",
       "occurrence": 1,
       "proves": "declaration and use-site contextual object views"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "\"ready\"",
+      "occurrence": 0,
+      "proves": "contextual literal type differs from its CardProps property target"
     },
     {
       "file": "src/app.tsx",

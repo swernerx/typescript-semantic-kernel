@@ -19,3 +19,4 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0009](0009-intern-object-symbol-and-signature-graphs-before-finalization.md) | Accepted | Intern object, symbol, and signature graphs before finalization |
 | [0010](0010-export-advanced-types-through-semantic-detail-records.md) | Accepted | Export advanced types through semantic detail records |
 | [0011](0011-build-api-facts-from-pinned-project-programs.md) | Accepted | Build API facts from pinned project programs |
+| [0012](0012-normalize-conformance-snapshots-without-rewriting-graph-identity.md) | Accepted | Normalize conformance snapshots without rewriting graph identity |
