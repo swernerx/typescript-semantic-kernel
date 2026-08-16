@@ -4,6 +4,7 @@ package occurrencemap
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -199,13 +200,13 @@ func Correlate(facts []semanticfacts.FactRecord, nodes []Node) (Report, error) {
 
 func validateIdentity(file string, span semanticfacts.Span, syntaxKind string) error {
 	if file == "" {
-		return fmt.Errorf("file is required")
+		return errors.New("file is required")
 	}
 	if span.Start < 0 || span.End < span.Start {
 		return fmt.Errorf("invalid span [%d, %d)", span.Start, span.End)
 	}
 	if syntaxKind == "" {
-		return fmt.Errorf("syntaxKind is required")
+		return errors.New("syntaxKind is required")
 	}
 	return nil
 }
