@@ -39,6 +39,12 @@ sentinels and truncation are retained in the snapshot rather than filtered out.
 The normalized JSON Lines must still decode and pass the same graph validator
 as raw output.
 
+Byte-level goldens run only with the embedded standard-library bundle. That
+configuration is the canonical producer environment for checked-in snapshots;
+the `noembed` build intentionally resolves the standard library from disk and
+can therefore produce a different, still valid graph. Structural conformance
+tests continue to run in both configurations.
+
 Raw JSON Lines determinism remains a separate protocol requirement and is
 tested independently. Normalized goldens do not change the wire format and are
 not permission to introduce additional unstable protocol fields.
@@ -68,15 +74,19 @@ but it risks erasing meaningful ordering and identity-allocation regressions.
 - Version upgrades require an intentional golden update only when normalized
   semantic evidence changes.
 - Internal well-known-symbol suffixes cannot create false byte-level diffs.
+- The `noembed` build does not compare against goldens produced from a
+  different standard-library source, while retaining structural coverage.
 - A normalizer change is itself contract-sensitive and requires review because
   excessive normalization could conceal a semantic regression.
 
 ## Validation and review triggers
 
-- Each normalized snapshot is produced twice, compared byte for byte, decoded,
-  and graph-validated before it is compared with the checked-in golden.
+- In the canonical embedded configuration, each normalized snapshot is
+  produced twice, compared byte for byte, decoded, and graph-validated before
+  it is compared with the checked-in golden.
 - Structural tests separately assert recursive sharing, generic signatures,
-  aliases, occurrence views, recovery, truncation, and named capability gaps.
+  aliases, occurrence views, recovery, truncation, and named capability gaps
+  in both embedded and `noembed` builds.
 - Revisit this decision if a new volatile field appears, a consumer needs the
   raw checker-internal well-known-symbol spelling, or normalization would need
   to rewrite response-local IDs or ordered semantic edges.
