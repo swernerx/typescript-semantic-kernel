@@ -65,10 +65,11 @@ Schema v1 currently guarantees:
 
 The initial slice does not guarantee inference traces, declarations outside
 the project root or TypeScript default libraries, symbol/signature budget
-counters, project references, or an in-process OXC bridge. The Go repository
-provides a consumer-neutral reference correlator and fixtures, but live OXC AST
-traversal and arena-local `NodeId` attachment require a Rust consumer boundary.
-Those remaining items are migration queue work, not implicit passes.
+counters, project references, or an in-process OXC bridge. An isolated internal
+Rust harness now exercises live OXC AST traversal and arena-local `NodeId`
+attachment through the consumer-neutral contract. It does not move parser
+types or semantic authority into the producer. Production integration and the
+other remaining items are migration queue work, not implicit passes.
 
 ## Equivalence oracle
 
