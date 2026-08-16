@@ -21,6 +21,14 @@ defaults:
     shell: bash
 
 jobs:
+  oxc-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fcf085fcb4b4b8f63f96906cd713eb52181b5ea4 # stable
+      - name: Test internal OXC reference consumer
+        run: cargo test --locked --manifest-path internal/oxc_reference/Cargo.toml
+
   build:
     runs-on: ubuntu-latest
     steps:

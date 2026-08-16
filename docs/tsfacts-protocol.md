@@ -282,5 +282,5 @@ references, daemon reuse, symbol/signature budget counters, and an in-process
 OXC bridge. The separate [occurrence correlation
 contract](occurrence-correlation.md) defines exact and normalized consumer-side
 attachment, diagnostics, metrics, and portable fixtures without adding OXC to
-the producer protocol. Actual OXC traversal and `NodeId` side-table ownership
-remain consumer-side work.
+the producer protocol. The internal Rust reference harness performs actual OXC
+traversal and owns its `NodeId` side table entirely on the consumer side.

@@ -5,11 +5,10 @@ facts and a syntax consumer's response-local node IDs. The reference
 implementation is `internal/occurrencemap`; JSON fixtures under
 `internal/occurrencemap/testdata/v1` are the language-neutral conformance data.
 
-The repository does not contain an OXC parser or Rust package. A production
-OXC adapter must walk its AST, project each relevant `NodeId` into the node
-candidate records below, and keep the returned mapping in a response-local side
-table. It must not persist `NodeId` values or add them to the semantic-facts
-producer protocol.
+The internal reference consumer in `internal/oxc_reference` walks OXC's AST,
+projects relevant `NodeId`s into the node candidate records below, and keeps
+the returned mapping in an arena-scoped side table. It does not persist typed
+`NodeId` values or add OXC/Rust types to the semantic-facts producer protocol.
 
 ## Identity and indexing
 
@@ -121,17 +120,19 @@ derive ratios without relying on floating-point serialization. The v1 fixtures
 cover JSX, declarations, expressions, flow-sensitive occurrences, exact-match
 precedence, both diagnostic states, and input-order determinism.
 
-## Missing production boundary
+## Reference consumer and production boundary
 
-Completing an actual OXC integration requires a Rust-owned adapter with access
-to the OXC AST and its arena-local `NodeId`s. That adapter must:
+The isolated Rust workspace supplies a deliberately narrow reference adapter
+with access to the OXC AST and its arena-local `NodeId`s. It:
 
-1. produce candidates and allow-listed anchors from an OXC traversal;
-2. run these fixtures against its implementation of this contract;
-3. measure real-project coverage by syntax kind; and
-4. store successful mappings in an OXC-side table.
+1. produces candidates and allow-listed anchors from a real OXC traversal;
+2. runs every shared v1 fixture against its implementation of this contract;
+3. emits machine-readable mappings, diagnostics, and coverage by syntax kind;
+4. stores successful mappings in an OXC-side typed `NodeId` table.
 
-None of those operations can be implemented faithfully in this Go repository
-without adding a second parser or fabricating foreign node IDs. The portable
-contract, reference algorithm, diagnostics, metrics, and fixtures are the
-smallest useful work that belongs here.
+This remains a migration harness rather than a second semantic authority. The
+Go checker is the oracle. Categories may be mechanically ported where useful,
+compared against that oracle, and replaced one at a time only after their
+compatibility threshold is met. Parser-specific ownership and projection stay
+inside the Rust workspace; the portable contract remains the only shared
+boundary.

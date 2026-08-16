@@ -1,0 +1,20 @@
+[package]
+name = "oxc-occurrence-consumer"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+oxc_allocator.workspace = true
+oxc_ast.workspace = true
+oxc_parser.workspace = true
+oxc_semantic.workspace = true
+oxc_span.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "oxc-occurrence-map"
+path = "src/main.rs"
