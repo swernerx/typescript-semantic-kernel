@@ -1,7 +1,6 @@
 package semanticfacts_test
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/microsoft/typescript-go/internal/bundled"
+	"github.com/microsoft/typescript-go/internal/json"
 	tsfacts "github.com/microsoft/typescript-go/internal/semanticfacts"
 	"github.com/microsoft/typescript-go/internal/vfs/vfstest"
 	"gotest.tools/v3/assert"
@@ -81,20 +81,27 @@ type corpusExpectations struct {
 	Truncation *bool `json:"truncation"`
 }
 
+type corpusCase struct {
+	directory string
+	manifest  corpusManifest
+}
+
 func TestSemanticFactsCorpusManifests(t *testing.T) {
+	t.Parallel()
+
 	entries, err := os.ReadDir(corpusRoot)
 	assert.NilError(t, err)
 
 	covered := make(map[string]string)
 	combinedEvidenceFound := false
-	caseCount := 0
+	cases := make([]corpusCase, 0, len(entries))
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
-		caseCount++
 		caseDirectory := filepath.Join(corpusRoot, entry.Name())
 		manifest := readCorpusManifest(t, caseDirectory)
+		assert.Equal(t, manifest.Name, entry.Name())
 		for _, capability := range manifest.Coverage {
 			assert.Assert(t, capability != "")
 			if previous := covered[capability]; previous != "" {
@@ -112,9 +119,21 @@ func TestSemanticFactsCorpusManifests(t *testing.T) {
 			})
 			combinedEvidenceFound = true
 		}
+		cases = append(cases, corpusCase{directory: caseDirectory, manifest: manifest})
+	}
 
-		t.Run(manifest.Name, func(t *testing.T) {
-			assert.Equal(t, manifest.Name, entry.Name())
+	assert.Assert(t, len(cases) >= 6, "corpus must remain split into locally diagnosable cases")
+	assert.Assert(t, combinedEvidenceFound, "one fixture must combine sharing, recursion, overloads, narrowing, and truncation")
+	for _, capability := range requiredCorpusCoverage {
+		assert.Assert(t, covered[capability] != "", "missing corpus coverage %q", capability)
+	}
+
+	for _, corpusCase := range cases {
+		t.Run(corpusCase.manifest.Name, func(t *testing.T) {
+			t.Parallel()
+
+			caseDirectory := corpusCase.directory
+			manifest := corpusCase.manifest
 			assert.Assert(t, manifest.Description != "")
 			assert.Assert(t, len(manifest.Coverage) != 0)
 			assert.Assert(t, len(manifest.Selections) != 0)
@@ -165,12 +184,6 @@ func TestSemanticFactsCorpusManifests(t *testing.T) {
 				assert.Equal(t, truncated, *manifest.Expectations.Truncation)
 			}
 		})
-	}
-
-	assert.Assert(t, caseCount >= 6, "corpus must remain split into locally diagnosable cases")
-	assert.Assert(t, combinedEvidenceFound, "one fixture must combine sharing, recursion, overloads, narrowing, and truncation")
-	for _, capability := range requiredCorpusCoverage {
-		assert.Assert(t, covered[capability] != "", "missing corpus coverage %q", capability)
 	}
 }
 
