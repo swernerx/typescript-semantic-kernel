@@ -1,0 +1,46 @@
+{
+  "name": "recovery-budgets",
+  "description": "Intentional checker/parser recovery and bounded recursive graph pressure",
+  "coverage": [
+    "recovery",
+    "syntax-errors",
+    "truncation-pressure",
+    "type-errors"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "limits.type-graph",
+    "occurrence.type-views",
+    "types.advanced",
+    "types.core-composite"
+  ],
+  "budgets": {
+    "maxTypeNodes": 128,
+    "maxTypeDepth": 2
+  },
+  "selections": [
+    {
+      "file": "src/recovery.ts",
+      "text": "recovered",
+      "occurrence": 1,
+      "proves": "type-error recovery remains an explicit fact state"
+    },
+    {
+      "file": "src/recovery.ts",
+      "text": "syntax",
+      "occurrence": 1,
+      "proves": "syntax-error recovery remains queryable"
+    },
+    {
+      "file": "src/recovery.ts",
+      "text": "deep",
+      "occurrence": 1,
+      "proves": "recursive advanced graph hits the configured depth budget"
+    }
+  ],
+  "expectations": {
+    "recovery": true,
+    "truncation": true
+  }
+}

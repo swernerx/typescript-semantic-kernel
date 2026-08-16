@@ -1,0 +1,54 @@
+{
+  "name": "vertical-slice",
+  "description": "Sharing, recursion, overloads, narrowing, and truncation pressure in one project",
+  "coverage": ["vertical-slice-density"],
+  "combinedEvidence": [
+    "control-flow-narrowing",
+    "overloads",
+    "recursion",
+    "sharing",
+    "truncation-pressure"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "graph.signatures",
+    "limits.type-graph",
+    "occurrence.type-views",
+    "types.advanced",
+    "types.core-composite"
+  ],
+  "budgets": {
+    "maxTypeNodes": 128,
+    "maxTypeDepth": 3
+  },
+  "selections": [
+    {
+      "file": "src/vertical.ts",
+      "text": "inspect",
+      "occurrence": 3,
+      "proves": "overloaded call signatures share recursive node types"
+    },
+    {
+      "file": "src/vertical.ts",
+      "text": "node",
+      "occurrence": 4,
+      "proves": "branch-local string narrowing differs from the declared union"
+    },
+    {
+      "file": "src/vertical.ts",
+      "text": "root",
+      "occurrence": 2,
+      "proves": "recursive SharedNode identity is reused at another occurrence"
+    },
+    {
+      "file": "src/vertical.ts",
+      "text": "pressure",
+      "occurrence": 1,
+      "proves": "recursive advanced type reaches the configured graph budget"
+    }
+  ],
+  "expectations": {
+    "truncation": true
+  }
+}

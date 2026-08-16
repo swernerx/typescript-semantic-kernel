@@ -1,0 +1,59 @@
+{
+  "name": "occurrence-contexts",
+  "description": "Imports, JSX, assertions, contextual typing, narrowing, and declaration/use views",
+  "coverage": [
+    "as-const",
+    "contextual-typing",
+    "control-flow-narrowing",
+    "declaration-use-views",
+    "imports",
+    "jsx-props",
+    "satisfies",
+    "type-assertions"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "graph.signatures",
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "selections": [
+    {
+      "file": "src/app.tsx",
+      "text": "imported",
+      "occurrence": 1,
+      "proves": "import alias and target declaration provenance"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "config",
+      "occurrence": 1,
+      "proves": "as-const value checked through satisfies"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "rendered",
+      "occurrence": 1,
+      "proves": "JSX element with contextually typed props"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "value",
+      "occurrence": 2,
+      "proves": "typeof control-flow narrowing in a return expression"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "contextual",
+      "occurrence": 1,
+      "proves": "declaration and use-site contextual object views"
+    },
+    {
+      "file": "src/app.tsx",
+      "text": "asserted",
+      "occurrence": 1,
+      "proves": "explicit type assertion view"
+    }
+  ]
+}

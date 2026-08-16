@@ -1,0 +1,35 @@
+{
+  "name": "callables-generics",
+  "description": "Overloads, signatures, generic instantiation, constraints, and defaults",
+  "coverage": [
+    "constraints",
+    "constructors",
+    "defaults",
+    "functions",
+    "generics",
+    "index-signatures",
+    "overloads",
+    "rest-parameters"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "graph.references",
+    "graph.signatures",
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "selections": [
+    {
+      "file": "src/callables.ts",
+      "text": "factory",
+      "occurrence": 1,
+      "proves": "overloaded call, construct, and index signatures"
+    },
+    {
+      "file": "src/callables.ts",
+      "text": "specialized",
+      "occurrence": 1,
+      "proves": "generic signature target and concrete type argument"
+    }
+  ]
+}
