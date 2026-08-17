@@ -2,7 +2,6 @@ use std::collections::{BTreeSet, VecDeque};
 
 use serde::Serialize;
 
-use crate::candidate::PrimitiveLiteralCandidate;
 use crate::facts::{
     EntityState, GraphIssue, GraphRef, OccurrenceTypeFacts, TypeGraph, TypeView, TypeViewState,
 };
@@ -30,7 +29,6 @@ impl Default for InspectorLimits {
 pub struct InspectionReport {
     pub fact: InspectedFactStatus,
     pub roots: Vec<InspectedRoot>,
-    pub primitive_literal_candidate: PrimitiveLiteralCandidate,
     pub nodes: Vec<InspectedNode>,
     pub edges: Vec<InspectedEdge>,
     pub diagnostics: Vec<InspectionDiagnostic>,
@@ -254,7 +252,6 @@ impl<'a> GraphInspector<'a> {
                 truncated: facts.truncated,
             },
             roots,
-            primitive_literal_candidate: PrimitiveLiteralCandidate::build(self.graph, facts),
             summary: InspectionSummary {
                 nodes: nodes.len(),
                 edges: edges.len(),

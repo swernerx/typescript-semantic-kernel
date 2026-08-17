@@ -264,21 +264,20 @@ general performance claim.
 
 This evidence approves mechanical porting of occurrence identity, correlation,
 response-global fact indexing, and side-table attachment behind the Go oracle.
-It approves no semantic checker category for replacement. ADR-0017 now records
-the first Rust-owned primitive/literal candidate over the Go-produced graph,
-but decoding and projecting Go-produced roots is not semantic equivalence or an
-independent producer. ADR-0016 defines the compatibility gates and lists the
-semantic areas that remain Go-authoritative.
+It approves no semantic checker category for replacement. ADR-0019 now records
+the first independent Rust/OXC primitive/literal producer and its exact shadow
+comparison with Go. The producer is not wired into production, so this evidence
+does not transfer semantic authority; ADR-0016 still lists the semantic areas
+that remain Go-authoritative.
 
-Issue #41 implements the next shadow gate under ADR-0018. The real Go producer
-and the Rust primitive/literal candidate run over the same six-case corpus;
-the deterministic JSON comparison covers fact identity, all five type-view
-roots, response-local graph identity, structured payloads, diagnostics,
-unsupported/error states, and truncation. CI requires 1,000,000 ppm agreement
-for complete in-category records and zero unexplained semantic or transport
-differences. Mapping gaps and expected unsupported/budget cases remain
-separately classified. This gate does not change the schema-v1 producer or
-approve a semantic replacement.
+Issue #45 replaces that projection with independent Rust/OXC computation under
+ADR-0019. The real Go producer and Rust run over the same tagged corpus, while
+only the comparator sees both outputs. Deterministic JSON comparison covers
+fact identity, exact OXC mapping, all five type-view roots, response-local graph
+identity, structured payloads, unsupported states, and truncation. CI requires
+1,000,000 ppm agreement for at least 15 complete supported records and zero
+semantic, transport, or mapping differences. This gate does not change the
+schema-v1 producer, external consumers, or production authority.
 
 ## Considered alternatives
 
@@ -348,11 +347,10 @@ spike demonstrate:
 
 Acceptance establishes the versioned boundary, not compiler equivalence,
 production readiness, or a Rust performance advantage. The TypeScript 7 Go
-checker remains the semantic oracle. The first primitive/literal Rust candidate
-is now a structured projection of the Go graph under ADR-0017 and passes the
-ADR-0018 shadow threshold. An independent producer and the complete ADR-0018
-replacement checklist are still required before any semantic category can be
-approved for replacement.
+checker remains the semantic oracle. The primitive/literal candidate is now
+computed independently from source and OXC semantics under ADR-0019 and passes
+its exact shadow threshold. It is not wired into production, and no semantic
+category is approved for replacement.
 
 ## Open questions
 
@@ -361,9 +359,9 @@ approved for replacement.
 - Is source range plus syntax category sufficient for all relevant OXC nodes?
 - Which portions of the type graph require exact structure in version 1, and
   which may initially be represented as opaque or truncated?
-- Which category-specific evidence will first satisfy ADR-0018's exact
-  compatibility threshold and replacement checklist using independent Rust
-  semantic output?
+- What production-integration evidence and rollout boundary would be required
+  before independently computed primitive/literal output could leave shadow
+  mode while preserving Go as a fallback?
 - Should the eventual public name be `tsfacts`, `TypeScript Semantic Kernel`, or
   another name that avoids implying an alternate TypeScript language?
 
@@ -376,3 +374,4 @@ approved for replacement.
 - [ADR-0016: Port occurrence attachment before semantic categories](../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md)
 - [ADR-0017: Project primitive/literal candidates from Go graph identity](../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md)
 - [ADR-0018: Gate Rust semantics against the Go oracle](../docs/adr/0018-gate-rust-semantics-against-the-go-oracle.md)
+- [ADR-0019: Compute primitive/literal candidates independently in Rust](../docs/adr/0019-compute-primitive-literals-independently-in-rust.md)

@@ -88,16 +88,14 @@ source remains Go-only because the current OXC parse fails; its facts are
 reported as consumer differences rather than omitted.
 
 ADR-0016 selects occurrence identity and attachment plumbing as the first safe
-mechanical port. ADR-0017 adds the first Rust-owned primitive/literal candidate
-record over the Go-produced graph so future comparisons can use structured
-kinds, literal values, union edges, roots, and states. It is not an independent
-producer. ADR-0018 adds the corpus-wide shadow gate and exact compatibility
-threshold, but passing it does not transfer semantic authority. No category may
-replace Go until independent Rust output completes ADR-0018's replacement
-checklist with no completeness/state downgrade, new unsupported form, or
-unexplained mapping gap. Project loading, resolution, binding, symbols,
-inference, contextual/widened types, overloads, generic instantiation,
-narrowing, and recovery remain Go-authoritative.
+mechanical port. ADR-0019 replaces the earlier Go-graph projection with a
+narrow independent Rust/OXC primitive/literal producer. The corpus-wide shadow
+gate compares its five roots, structured graph identity, states, mapping, and
+truncation against Go at an exact threshold. Passing it does not transfer
+semantic authority or alter production routing. Project loading, resolution,
+binding, symbols, inference beyond the supported contextual literals,
+overloads, generic instantiation, narrowing, recovery, and all production
+fallback behavior remain Go-authoritative.
 
 ## Gate ladder
 
@@ -116,8 +114,8 @@ narrowing, and recovery remain Go-authoritative.
 8. `./internal/oxc_reference/run-evidence.sh --output <path>` produces stable
    repeated observations and passes ADR-0016's occurrence/attachment gate.
 9. `./internal/oxc_reference/run-conformance.sh --output <path>` emits the
-   deterministic ADR-0018 report and fails on any unexplained semantic or
-   transport mismatch while retaining mapping, unsupported, and budget cases.
+   deterministic ADR-0019 report and fails on any semantic, transport, or
+   mapping mismatch while retaining named unsupported and budget cases.
 
 ## Upstream synchronization
 

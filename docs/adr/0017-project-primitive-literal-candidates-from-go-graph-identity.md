@@ -1,10 +1,10 @@
 # ADR-0017: Project primitive/literal candidates from Go graph identity
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-08-17
 - Deciders: TypeScript Semantic Kernel maintainers
 - Supersedes: —
-- Superseded by: —
+- Superseded by: ADR-0019
 
 ## Context
 

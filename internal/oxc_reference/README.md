@@ -60,15 +60,18 @@ Run the deterministic Go-versus-Rust shadow conformance gate with:
   --output /tmp/ts7-rust-conformance.json
 ```
 
-The command runs the same corpus through the Go oracle and the version-1 Rust
-primitive/literal candidate. Its JSON compares fact identity, all five roots,
-response-local graph identity, structured payloads, diagnostics, unsupported
-and error states, and truncation. Every entry is classified as `semantic`,
-`transport`, `mapping`, `unsupported`, or `budget`. Unexplained semantic or
-transport differences fail the command; expected unsupported/budget cases and
-the known recovery-file mapping gap remain separately reported. The gate is a
-shadow comparison and does not change the producer or production routing. See
-[ADR-0018](../../docs/adr/0018-gate-rust-semantics-against-the-go-oracle.md).
+The command runs the same corpus through the Go oracle and the version-2 Rust
+primitive/literal candidate. Rust derives its records independently from the
+project source and OXC semantic nodes; the Go graph is supplied only to the
+comparator. Its JSON compares fact identity, exact OXC mapping, all five roots,
+response-local graph identity through a Go-to-Rust ID bijection, structured
+payloads, recovery, unsupported states, and truncation. Every entry is
+classified as `semantic`, `transport`, `mapping`, `unsupported`, or `budget`.
+Unexplained
+semantic, transport, or mapping differences fail the command; named
+unsupported and budget cases remain separately reported. The gate is a shadow
+comparison and does not change the producer or production routing. See
+[ADR-0019](../../docs/adr/0019-compute-primitive-literals-independently-in-rust.md).
 
 The first test suite applies the Rust implementation of the portable contract
 to every shared JSON fixture in `internal/occurrencemap/testdata/v1` and checks
@@ -94,14 +97,11 @@ diagnostics remain visible. Depth, node, and edge budgets are consumer-local
 guards and do not rewrite or reinterpret producer records. See
 [ADR-0015](../../docs/adr/0015-attach-semantic-facts-without-expanding-graph-identity.md).
 
-Each inspection also contains the internal version-1 primitive/literal Rust
-candidate documented by
-[ADR-0017](../../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md).
-It records the occurrence, fact status, all five roots, structured primitive or
-literal values, ordered union member TypeIDs, and explicit candidate/source
-states. Candidate records intentionally omit display text. The shared
-`primitive-literal-candidate` canonical fixture is round-tripped by Go and
-attached, inspected, and asserted here through OXC.
+Graph inspection remains a consumer of the Go response and does not synthesize
+Rust candidate records. The independent primitive/literal producer lives beside
+the inspector and is exercised only by focused tests and the shadow conformance
+runner. It accepts source/project inputs, owns its response-local type identity,
+and never receives the Go graph used as the oracle.
 
 ## Migration boundary
 
@@ -115,11 +115,11 @@ negotiation in Go. The intended migration sequence is:
    explicit and met.
 
 Occurrence identity and attachment plumbing is the first approved mechanical
-port category. The primitive/literal projection is the first implemented
-semantic candidate record, but it consumes Go-produced graph facts and does
-not constitute an independent producer. All semantic answers remain
-Go-authoritative until an independent Rust producer completes ADR-0018's
-replacement checklist.
+port category. Primitive/literal construction is now independently implemented
+for the narrow, tagged conformance corpus and satisfies the shadow threshold in
+ADR-0019. This does not transfer semantic authority: the implementation is not
+wired into production, Go remains the fallback, and broader TypeScript
+semantics remain Go-authoritative.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.
