@@ -264,11 +264,11 @@ general performance claim.
 
 This evidence approves mechanical porting of occurrence identity, correlation,
 response-global fact indexing, and side-table attachment behind the Go oracle.
-It approves no semantic checker category for replacement. Primitive/literal
-record construction is the first proposed independent Rust semantic candidate,
-but decoding Go-produced roots and correlating syntax is not semantic
-equivalence. ADR-0016 defines the compatibility gates and lists the semantic
-areas that remain Go-authoritative.
+It approves no semantic checker category for replacement. ADR-0017 now records
+the first Rust-owned primitive/literal candidate over the Go-produced graph,
+but decoding and projecting Go-produced roots is not semantic equivalence or an
+independent producer. ADR-0016 defines the compatibility gates and lists the
+semantic areas that remain Go-authoritative.
 
 ## Considered alternatives
 
@@ -338,9 +338,10 @@ spike demonstrate:
 
 Acceptance establishes the versioned boundary, not compiler equivalence,
 production readiness, or a Rust performance advantage. The TypeScript 7 Go
-checker remains the semantic oracle. The next candidate is independent
-primitive/literal Rust type-record construction under ADR-0016's differential
-gates; no semantic category is approved for replacement yet.
+checker remains the semantic oracle. The first primitive/literal Rust candidate
+is now a structured projection of the Go graph under ADR-0017; an independent
+producer and ADR-0016's differential gates are still required before any
+semantic category can be approved for replacement.
 
 ## Open questions
 
@@ -362,3 +363,4 @@ gates; no semantic category is approved for replacement yet.
 - [Oxlint type-aware architecture](https://oxc.rs/docs/guide/usage/linter/type-aware.html)
 - [TS7-to-OXC/Rust spike evidence](../docs/evidence/ts7-oxc-spike-2026-08-17.json)
 - [ADR-0016: Port occurrence attachment before semantic categories](../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md)
+- [ADR-0017: Project primitive/literal candidates from Go graph identity](../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md)

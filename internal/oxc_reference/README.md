@@ -77,6 +77,15 @@ diagnostics remain visible. Depth, node, and edge budgets are consumer-local
 guards and do not rewrite or reinterpret producer records. See
 [ADR-0015](../../docs/adr/0015-attach-semantic-facts-without-expanding-graph-identity.md).
 
+Each inspection also contains the internal version-1 primitive/literal Rust
+candidate documented by
+[ADR-0017](../../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md).
+It records the occurrence, fact status, all five roots, structured primitive or
+literal values, ordered union member TypeIDs, and explicit candidate/source
+states. Candidate records intentionally omit display text. The shared
+`primitive-literal-candidate` canonical fixture is round-tripped by Go and
+attached, inspected, and asserted here through OXC.
+
 ## Migration boundary
 
 Keep parser-specific traversal and allow-listed span/kind projection in this
@@ -89,9 +98,11 @@ negotiation in Go. The intended migration sequence is:
    explicit and met.
 
 Occurrence identity and attachment plumbing is the first approved mechanical
-port category. Primitive/literal record construction is only the next proposed
-semantic candidate; all semantic answers remain Go-authoritative until an
-independent Rust producer passes ADR-0016's differential gate.
+port category. The primitive/literal projection is the first implemented
+semantic candidate record, but it consumes Go-produced graph facts and does
+not constitute an independent producer. All semantic answers remain
+Go-authoritative until an independent Rust producer passes ADR-0016's
+differential gate.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.

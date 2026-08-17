@@ -88,12 +88,14 @@ source remains Go-only because the current OXC parse fails; its facts are
 reported as consumer differences rather than omitted.
 
 ADR-0016 selects occurrence identity and attachment plumbing as the first safe
-mechanical port. Primitive/literal type construction is the first proposed
-semantic implementation candidate, but no semantic category may replace Go
-until independent Rust output matches the normalized structured oracle with no
-completeness/state downgrade or new unsupported form. Project loading,
-resolution, binding, symbols, inference, contextual/widened types, overloads,
-generic instantiation, narrowing, and recovery remain Go-authoritative.
+mechanical port. ADR-0017 adds the first Rust-owned primitive/literal candidate
+record over the Go-produced graph so future comparisons can use structured
+kinds, literal values, union edges, roots, and states. It is not an independent
+producer, and no semantic category may replace Go until independent Rust output
+matches the normalized structured oracle with no completeness/state downgrade
+or new unsupported form. Project loading, resolution, binding, symbols,
+inference, contextual/widened types, overloads, generic instantiation,
+narrowing, and recovery remain Go-authoritative.
 
 ## Gate ladder
 

@@ -1,3 +1,4 @@
+pub mod candidate;
 pub mod contract;
 pub mod evidence;
 pub mod facts;
@@ -18,6 +19,10 @@ mod tests {
     use oxc_allocator::Allocator;
 
     use crate::{
+        candidate::{
+            CandidateReason, CandidateSemantic, CandidateState, LiteralKind, NullLikeKind,
+            PrimitiveKind,
+        },
         contract::{DiagnosticCode, correlate},
         facts::{GraphRef, SemanticSnapshot, TypeViewState},
         fixture::load_fixtures,
@@ -136,6 +141,152 @@ mod tests {
             TypeViewState::Unavailable
         );
         assert!(std::ptr::eq(first.graph(), second.graph()));
+    }
+
+    #[test]
+    fn primitive_literal_candidate_is_structured_deterministic_and_state_preserving() {
+        let snapshot = load_canonical_snapshot("primitive-literal-candidate.jsonl");
+        let source = fs::read_to_string(canonical_fixture_path("primitive-literal-candidate.ts"))
+            .expect("read primitive/literal candidate source");
+        let allocator = Allocator::default();
+        let mut consumer =
+            OxcConsumer::parse(&allocator, "src/primitive-literal-candidate.ts", &source)
+                .expect("parse primitive/literal candidate source");
+        let report = consumer
+            .attach(snapshot)
+            .expect("attach primitive/literal candidate fixture");
+        assert_eq!(report.summary.facts, 4);
+        assert_eq!(report.summary.mapped, 4);
+
+        let inspections = report
+            .mappings
+            .iter()
+            .map(|mapping| {
+                let node = consumer
+                    .node_for_fact(mapping.fact_index)
+                    .expect("mapped candidate node");
+                let attached = consumer
+                    .type_facts_for_node(node)
+                    .find(|facts| facts.fact_index == mapping.fact_index)
+                    .expect("attached candidate facts");
+                let first = attached.inspect(InspectorLimits::default());
+                let second = attached.inspect(InspectorLimits::default());
+                assert_eq!(
+                    serde_json::to_string(&first.primitive_literal_candidate)
+                        .expect("serialize first candidate"),
+                    serde_json::to_string(&second.primitive_literal_candidate)
+                        .expect("serialize second candidate")
+                );
+                first
+            })
+            .collect::<Vec<_>>();
+
+        let primitives = &inspections[0].primitive_literal_candidate;
+        assert_eq!(primitives.roots.len(), 5);
+        assert!(matches!(
+            &candidate_type(primitives, "type:1").semantic,
+            Some(CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::Boolean
+            })
+        ));
+        assert!(matches!(
+            &candidate_type(primitives, "type:2").semantic,
+            Some(CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::String
+            })
+        ));
+        assert!(matches!(
+            &candidate_type(primitives, "type:3").semantic,
+            Some(CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::Number
+            })
+        ));
+        assert!(matches!(
+            &candidate_type(primitives, "type:4").semantic,
+            Some(CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::Bigint
+            })
+        ));
+        assert!(matches!(
+            &candidate_type(primitives, "type:5").semantic,
+            Some(CandidateSemantic::NullLike {
+                null_like: NullLikeKind::Null
+            })
+        ));
+
+        let literals = &inspections[1].primitive_literal_candidate;
+        for (id, kind, value) in [
+            ("type:6", LiteralKind::String, "ready"),
+            ("type:7", LiteralKind::Boolean, "true"),
+            ("type:8", LiteralKind::Number, "42"),
+            ("type:9", LiteralKind::Bigint, "42"),
+        ] {
+            assert!(matches!(
+                &candidate_type(literals, id).semantic,
+                Some(CandidateSemantic::Literal {
+                    literal,
+                    value: actual
+                }) if *literal == kind && actual == value
+            ));
+        }
+        assert!(matches!(
+            &candidate_type(literals, "type:10").semantic,
+            Some(CandidateSemantic::NullLike {
+                null_like: NullLikeKind::Undefined
+            })
+        ));
+
+        let union = &inspections[2].primitive_literal_candidate;
+        assert!(matches!(
+            &candidate_type(union, "type:11").semantic,
+            Some(CandidateSemantic::Union { members })
+                if members.iter().map(|id| id.as_str()).collect::<Vec<_>>()
+                    == vec!["type:6", "type:7", "type:8", "type:9", "type:5", "type:10"]
+        ));
+        assert_eq!(union.summary.complete, 7);
+
+        let incomplete = &inspections[3].primitive_literal_candidate;
+        assert_eq!(incomplete.roots.len(), 5);
+        assert_eq!(
+            incomplete.roots[3].type_id.as_ref().map(|id| id.as_str()),
+            Some("type:12")
+        );
+        assert_eq!(incomplete.roots[4].state, TypeViewState::Unavailable);
+        assert!(incomplete.roots[4].type_id.is_none());
+        assert_eq!(
+            candidate_type(incomplete, "type:12").candidate_state,
+            CandidateState::Unsupported
+        );
+        assert_eq!(
+            candidate_type(incomplete, "type:13").candidate_state,
+            CandidateState::Truncated
+        );
+        assert_eq!(
+            candidate_type(incomplete, "type:14").candidate_state,
+            CandidateState::Truncated
+        );
+        assert!(
+            candidate_type(incomplete, "type:12")
+                .reasons
+                .contains(&CandidateReason::SourceUnsupported)
+        );
+        assert!(
+            candidate_type(incomplete, "type:14")
+                .reasons
+                .contains(&CandidateReason::SourceTruncated)
+        );
+        assert_eq!(incomplete.summary.complete, 1);
+        assert_eq!(incomplete.summary.truncated, 2);
+        assert_eq!(incomplete.summary.unsupported, 1);
+
+        let serialized = serde_json::to_string(
+            &inspections
+                .iter()
+                .map(|inspection| &inspection.primitive_literal_candidate)
+                .collect::<Vec<_>>(),
+        )
+        .expect("serialize structured primitive/literal candidates");
+        assert!(!serialized.contains("\"display\""));
     }
 
     #[test]
@@ -357,6 +508,17 @@ mod tests {
             SemanticSnapshot::from_json_lines(BufReader::new(file))
                 .unwrap_or_else(|error| panic!("decode {}: {error}", path.display())),
         )
+    }
+
+    fn candidate_type<'a>(
+        candidate: &'a crate::candidate::PrimitiveLiteralCandidate,
+        id: &str,
+    ) -> &'a crate::candidate::CandidateTypeRecord {
+        candidate
+            .types
+            .iter()
+            .find(|record| record.id.as_str() == id)
+            .unwrap_or_else(|| panic!("candidate omitted {id}"))
     }
 
     fn minimal_snapshot(syntax_kinds: &[&str]) -> String {
