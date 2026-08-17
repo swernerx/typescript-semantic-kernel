@@ -94,16 +94,16 @@ gate compares its five roots, structured graph identity, states, mapping, and
 truncation against Go at an exact threshold. Passing it does not transfer
 semantic authority or alter production routing. Project loading, resolution,
 binding, symbols, inference beyond the supported contextual literals,
-overloads, generic instantiation, narrowing, recovery, and all production
-fallback behavior remain Go-authoritative.
+overloads, generic instantiation, narrowing, and recovery remain
+Go-authoritative.
 
 ADR-0020 adds the controlled rollout lane. Two complete runs must share the
 checked-out corpus and repository revision, TS compiler revision, request
 schema, project, capabilities, budgets, and ordered selections. The stable
 conformance reports must be byte-identical. Host-dependent runtime, resident
 memory, artifact size, and producer-output size remain separately scoped
-characterization evidence. The lane is shadow-only and does not exercise or
-authorize production routing.
+characterization evidence. The lane is shadow-only and does not authorize
+production routing.
 
 Issue #52 adds conformance schema v5's all-selection accounting gate. Every
 selected fact must be classified, the classification count must remain equal
@@ -112,6 +112,26 @@ four unsupported primitive/literal selections and three recovery-file mapping
 gaps are retained as stable regression limitations with machine-readable
 owners and concrete reclassification actions. They are neither dropped from
 the corpus nor counted as supported. Go remains semantic authority and the
+production fallback.
+
+Issue #53 selects a production-equivalent, one-shot child-process boundary for
+the rollout controller. The controller obtains the served response from the
+real release `tsfacts` child and starts the release Rust
+`primitive-shadow-worker` child only for observation. Both children cover the
+same ordered per-case project selections and limits. The Rust worker's compact
+JSON is an internal harness contract, not a change to the TS7 producer
+protocol. A Rust failure preserves the Go response, records the failure, and
+disables shadow execution until an explicit reset; a Go failure is never
+masked. These fallback, rollback, reset, and failure-observation paths are
+executable tests and structured rollout fields.
+
+Both runtime samples now measure the same release child-process scope. Raw
+successful stdout bytes are counted before decoding, artifact sizes cover the
+two invoked executables, and Unix `wait4` peak RSS is measured independently
+for every child and aggregated per producer. Different internal payload
+schemas and sequential one-shot execution remain explicit characterization
+caveats. Passing this evidence makes the slice ready for a later authority
+decision, but does not itself switch authority: Go remains the serving path and
 production fallback.
 
 ## Gate ladder
@@ -136,9 +156,10 @@ production fallback.
    mapping cases. Its supported-record metric is paired with a mandatory 100%
    all-selection accounting denominator, so no classified case is hidden.
 10. `./internal/oxc_reference/run-rollout.sh --output <path>` executes two
-    release-profile dual-runs, requires byte-identical embedded conformance,
-    records the controlled measurements in ADR-0020, and retains Go as serving
-    authority and production fallback.
+    release-profile dual-runs at the same one-shot child-process boundary,
+    requires byte-identical embedded conformance, exercises fallback and
+    rollback, records comparable runtime/output/artifact/child-RSS scopes in
+    ADR-0020, and retains Go as serving authority and production fallback.
 
 ## Upstream synchronization
 

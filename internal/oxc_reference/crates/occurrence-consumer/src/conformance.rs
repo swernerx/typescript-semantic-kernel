@@ -4,7 +4,6 @@ use std::{
     io::{BufReader, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    time::Instant,
 };
 
 use serde::{Deserialize, Serialize};
@@ -16,19 +15,20 @@ use crate::{
         PrimitiveLiteralCandidate,
     },
     contract::{Occurrence, Span},
-    evidence::resident_memory,
     facts::{
         EntityState, LiteralValue, OccurrenceTypeFacts, ProducerBudgetReport, SemanticSnapshot,
         TypeGraph, TypeId, TypeKind, TypeViewState, TypeViewStates,
     },
     primitive_producer::{
-        IndependentPrimitiveLiteralOutput, PrimitiveLiteralSelection, PrimitiveProducerLimits,
-        produce_primitive_literals,
+        INDEPENDENT_PRIMITIVE_LITERAL_PRODUCER_VERSION, IndependentPrimitiveLiteralOutput,
+        PrimitiveLiteralSelection, PrimitiveProducerLimits, PrimitiveShadowBudgets,
+        PrimitiveShadowRequest, produce_primitive_literals,
     },
+    serving::{ProcessObservation, ServingShadowController, ShadowObservation, run_child},
 };
 
 pub const CONFORMANCE_SCHEMA_VERSION: u32 = 5;
-pub const ROLLOUT_SCHEMA_VERSION: u32 = 2;
+pub const ROLLOUT_SCHEMA_VERSION: u32 = 3;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +67,8 @@ pub struct RolloutReport {
     pub command: &'static str,
     pub environment: RolloutEnvironment,
     pub authority: AuthorityBoundary,
+    pub boundary: ProductionBoundary,
+    pub failure_paths: FailurePathEvidence,
     pub determinism: DeterminismEvidence,
     pub conformance: ConformanceReport,
     pub measurements: RolloutMeasurements,
@@ -97,6 +99,43 @@ pub struct AuthorityBoundary {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ProductionBoundary {
+    pub name: &'static str,
+    pub controller: &'static str,
+    pub go_serving_process: &'static str,
+    pub rust_shadow_process: &'static str,
+    pub request_scope: &'static str,
+    pub served_output: &'static str,
+    pub same_one_shot_child_process_boundary: bool,
+    pub release_artifacts: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FailurePathEvidence {
+    pub go_response_survives_shadow_failure: bool,
+    pub shadow_failure_is_observed: bool,
+    pub shadow_failure_detail_retained: bool,
+    pub rollback_disables_shadow: bool,
+    pub rolled_back_request_skips_shadow: bool,
+    pub explicit_reset_reenables_shadow: bool,
+    pub go_failure_is_not_masked: bool,
+}
+
+impl FailurePathEvidence {
+    fn passes(self) -> bool {
+        self.go_response_survives_shadow_failure
+            && self.shadow_failure_is_observed
+            && self.shadow_failure_detail_retained
+            && self.rollback_disables_shadow
+            && self.rolled_back_request_skips_shadow
+            && self.explicit_reset_reenables_shadow
+            && self.go_failure_is_not_masked
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeterminismEvidence {
     pub complete_runs: usize,
     pub conformance_reports_byte_equal: bool,
@@ -107,6 +146,8 @@ pub struct DeterminismEvidence {
 #[serde(rename_all = "camelCase")]
 pub struct RolloutMeasurements {
     pub scope: &'static str,
+    pub output_scope: &'static str,
+    pub memory_scope: &'static str,
     pub samples: Vec<MeasurementSample>,
     pub artifacts: RolloutArtifacts,
 }
@@ -116,12 +157,16 @@ pub struct RolloutMeasurements {
 pub struct MeasurementSample {
     pub ordinal: usize,
     pub cases: usize,
-    pub go_oracle_nanoseconds: u64,
-    pub rust_producer_nanoseconds: u64,
-    pub rust_determinism_check_nanoseconds: u64,
-    pub total_nanoseconds: u64,
-    pub go_snapshot_bytes: usize,
-    pub rust_candidate_bytes: usize,
+    pub go_serving_wall_nanoseconds: u64,
+    pub rust_shadow_wall_nanoseconds: u64,
+    pub go_served_output_bytes: usize,
+    pub rust_shadow_output_bytes: usize,
+    pub go_peak_resident_bytes: Option<u64>,
+    pub rust_peak_resident_bytes: Option<u64>,
+    pub resident_measurement: String,
+    pub memory_comparable: bool,
+    pub served_go_responses_unchanged: bool,
+    pub shadow_observation_failures: usize,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -129,9 +174,7 @@ pub struct MeasurementSample {
 pub struct RolloutArtifacts {
     pub go_executable_bytes: u64,
     pub rust_executable_bytes: u64,
-    pub peak_or_current_controller_resident_bytes: Option<u64>,
-    pub resident_measurement: String,
-    pub memory_scope: &'static str,
+    pub scope: &'static str,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -140,6 +183,7 @@ pub struct AuthorityReadiness {
     pub ready_for_later_authority_decision: bool,
     pub status: &'static str,
     pub resolved_rollout_limitations: Vec<ResolvedRolloutLimitation>,
+    pub remaining_caveats: Vec<String>,
     pub blockers: Vec<String>,
 }
 
@@ -493,7 +537,6 @@ struct ProducerSelection {
 
 struct CompletedConformanceRun {
     report: ConformanceReport,
-    measurement: MeasurementSample,
 }
 
 pub fn run_conformance(
@@ -516,22 +559,32 @@ pub fn run_rollout(
     corpus_root: &Path,
     repository_revision: &str,
 ) -> Result<RolloutReport, String> {
-    let mut first = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
-    let mut repeated = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
-    first.measurement.ordinal = 1;
-    repeated.measurement.ordinal = 2;
+    let first = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
+    let repeated = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
     let first_bytes = serde_json::to_vec(&first.report)
         .map_err(|error| format!("transport: serialize first conformance report: {error}"))?;
     let repeated_bytes = serde_json::to_vec(&repeated.report)
         .map_err(|error| format!("transport: serialize repeated conformance report: {error}"))?;
     let reports_equal = first_bytes == repeated_bytes;
     let conformance_passes = first.report.passes && repeated.report.passes;
-    let readiness = authority_readiness(&first.report.cases);
-    let (resident_bytes, resident_measurement) = resident_memory();
-    let rust_executable_bytes = std::env::current_exe()
-        .ok()
-        .and_then(|path| fs::metadata(path).ok())
-        .map_or(0, |metadata| metadata.len());
+    let rust_executable = std::env::current_exe()
+        .map_err(|error| format!("transport: resolve Rust rollout executable: {error}"))?;
+    let first_measurement =
+        run_production_boundary_sample(tsfacts_binary, &rust_executable, corpus_root, 1)?;
+    let repeated_measurement =
+        run_production_boundary_sample(tsfacts_binary, &rust_executable, corpus_root, 2)?;
+    let measurements_pass = [&first_measurement, &repeated_measurement]
+        .iter()
+        .all(|sample| {
+            sample.memory_comparable
+                && sample.served_go_responses_unchanged
+                && sample.shadow_observation_failures == 0
+        });
+    let failure_paths = exercise_failure_paths();
+    let evidence_ready =
+        conformance_passes && reports_equal && measurements_pass && failure_paths.passes();
+    let readiness = authority_readiness(&first.report.cases, evidence_ready);
+    let rust_executable_bytes = fs::metadata(&rust_executable).map_or(0, |metadata| metadata.len());
     let go_executable_bytes = fs::metadata(tsfacts_binary).map_or(0, |metadata| metadata.len());
 
     Ok(RolloutReport {
@@ -553,6 +606,17 @@ pub fn run_rollout(
             ts7_producer_protocol_changed: false,
             external_consumer_behavior_changed: false,
         },
+        boundary: ProductionBoundary {
+            name: "one-shot-child-process-shadow",
+            controller: "release rollout controller",
+            go_serving_process: "cmd/tsfacts JSON Lines serving child",
+            rust_shadow_process: "oxc-occurrence-map primitive-shadow-worker child",
+            request_scope: "same ordered manifest selections, capabilities, budgets, and project per classified corpus case",
+            served_output: "Go stdout only; Rust stdout is observation-only",
+            same_one_shot_child_process_boundary: true,
+            release_artifacts: true,
+        },
+        failure_paths,
         determinism: DeterminismEvidence {
             complete_runs: 2,
             conformance_reports_byte_equal: reports_equal,
@@ -560,18 +624,18 @@ pub fn run_rollout(
         },
         conformance: first.report,
         measurements: RolloutMeasurements {
-            scope: "one-shot Go process versus in-process Rust producer over identical ordered requests; characterization only",
-            samples: vec![first.measurement, repeated.measurement],
+            scope: "sequential one-shot release child processes over identical ordered per-case requests; characterization, not a throughput benchmark",
+            output_scope: "raw successful child stdout bytes before decoding; Go JSON Lines and the internal Rust shadow payload have different schemas",
+            memory_scope: "per-child peak resident set from wait4 rusage, aggregated as the maximum across case processes for each producer",
+            samples: vec![first_measurement, repeated_measurement],
             artifacts: RolloutArtifacts {
                 go_executable_bytes,
                 rust_executable_bytes,
-                peak_or_current_controller_resident_bytes: resident_bytes,
-                resident_measurement,
-                memory_scope: "Rust rollout controller including decoded Go snapshots; excludes child Go process RSS",
+                scope: "on-disk bytes of the two release executables invoked at the selected child-process boundary",
             },
         },
         readiness,
-        passes: conformance_passes && reports_equal,
+        passes: evidence_ready,
     })
 }
 
@@ -591,8 +655,6 @@ fn run_conformance_observed(
         discovered_cases: case_directories.len(),
         ..CorpusCoverage::default()
     };
-    let run_started = Instant::now();
-    let mut measurement = MeasurementSample::default();
     let mut cases = Vec::new();
     for case_directory in case_directories {
         let manifest = read_manifest(&case_directory)?;
@@ -621,46 +683,13 @@ fn run_conformance_observed(
             budgets: request.budgets,
             selections: request.selections.len(),
         };
-        let go_started = Instant::now();
-        let (snapshot, snapshot_bytes) = run_go_oracle(&tsfacts_binary, &case_directory, &request)?;
-        measurement.go_oracle_nanoseconds = measurement
-            .go_oracle_nanoseconds
-            .saturating_add(duration_nanoseconds(go_started.elapsed().as_nanos()));
-        measurement.go_snapshot_bytes =
-            measurement.go_snapshot_bytes.saturating_add(snapshot_bytes);
-        let selections = request
-            .selections
-            .iter()
-            .map(|selection| {
-                Ok(PrimitiveLiteralSelection {
-                    file: selection.file.clone(),
-                    span: Span {
-                        start: u32::try_from(selection.start)
-                            .map_err(|_| "selection start exceeds u32")?,
-                        end: u32::try_from(selection.end)
-                            .map_err(|_| "selection end exceeds u32")?,
-                    },
-                })
-            })
-            .collect::<Result<Vec<_>, String>>()?;
+        let (snapshot, _) = run_go_oracle(&tsfacts_binary, &case_directory, &request)?;
+        let selections = primitive_selections(&request)?;
         let limits = PrimitiveProducerLimits {
             max_type_nodes: usize::try_from(manifest.budgets.max_type_nodes).unwrap_or(usize::MAX),
         };
-        let rust_started = Instant::now();
         let first = produce_primitive_literals(&case_directory, &selections, limits)?;
-        measurement.rust_producer_nanoseconds = measurement
-            .rust_producer_nanoseconds
-            .saturating_add(duration_nanoseconds(rust_started.elapsed().as_nanos()));
-        measurement.rust_candidate_bytes = measurement.rust_candidate_bytes.saturating_add(
-            serde_json::to_vec(&first)
-                .map_err(|error| format!("transport: serialize Rust candidate output: {error}"))?
-                .len(),
-        );
-        let repeated_started = Instant::now();
         let repeated = produce_primitive_literals(&case_directory, &selections, limits)?;
-        measurement.rust_determinism_check_nanoseconds = measurement
-            .rust_determinism_check_nanoseconds
-            .saturating_add(duration_nanoseconds(repeated_started.elapsed().as_nanos()));
         let repeated_equal = serde_json::to_vec(&first).ok() == serde_json::to_vec(&repeated).ok();
         let expectations = manifest
             .selections
@@ -694,8 +723,6 @@ fn run_conformance_observed(
     let threshold = compatibility_threshold();
     let passes = threshold_passes(&summary, threshold);
     let (typescript_version, typescript_revision) = compiler_identity(&cases)?;
-    measurement.cases = cases.len();
-    measurement.total_nanoseconds = duration_nanoseconds(run_started.elapsed().as_nanos());
     let report = ConformanceReport {
         schema_version: CONFORMANCE_SCHEMA_VERSION,
         gate_kind: "go-vs-independent-rust-semantic-conformance",
@@ -718,10 +745,268 @@ fn run_conformance_observed(
         summary,
         passes,
     };
-    Ok(CompletedConformanceRun {
-        report,
-        measurement,
-    })
+    Ok(CompletedConformanceRun { report })
+}
+
+fn run_production_boundary_sample(
+    tsfacts_binary: &Path,
+    rust_executable: &Path,
+    corpus_root: &Path,
+    ordinal: usize,
+) -> Result<MeasurementSample, String> {
+    let tsfacts_binary = tsfacts_binary
+        .canonicalize()
+        .map_err(|error| format!("transport: resolve {}: {error}", tsfacts_binary.display()))?;
+    let rust_executable = rust_executable
+        .canonicalize()
+        .map_err(|error| format!("transport: resolve {}: {error}", rust_executable.display()))?;
+    let corpus_root = corpus_root
+        .canonicalize()
+        .map_err(|error| format!("transport: resolve {}: {error}", corpus_root.display()))?;
+    let mut sample = MeasurementSample {
+        ordinal,
+        served_go_responses_unchanged: true,
+        ..MeasurementSample::default()
+    };
+    let mut resident_methods = BTreeSet::new();
+    let mut controller = ServingShadowController::default();
+
+    for case_directory in sorted_case_directories(&corpus_root)? {
+        let manifest = read_manifest(&case_directory)?;
+        let expectation_count = manifest
+            .selections
+            .iter()
+            .filter(|selection| selection.conformance.is_some())
+            .count();
+        if expectation_count == 0 {
+            continue;
+        }
+        if expectation_count != manifest.selections.len() {
+            return Err(format!(
+                "transport: case {:?} has {expectation_count}/{} conformance expectations; measured cases must classify every fixture",
+                manifest.name,
+                manifest.selections.len()
+            ));
+        }
+        validate_expectations(&manifest)?;
+        let request = build_request(&case_directory, &manifest)?;
+        let go_request = serde_json::to_vec(&request)
+            .map_err(|error| format!("transport: encode Go serving request: {error}"))?;
+        let shadow_request = serde_json::to_vec(&PrimitiveShadowRequest {
+            schema_version: request.schema_version,
+            project: request.project.to_owned(),
+            required_capabilities: request.required_capabilities.to_vec(),
+            budgets: PrimitiveShadowBudgets {
+                max_type_nodes: request.budgets.max_type_nodes,
+                max_type_depth: request.budgets.max_type_depth,
+            },
+            selections: primitive_selections(&request)?,
+            limits: PrimitiveProducerLimits {
+                max_type_nodes: usize::try_from(manifest.budgets.max_type_nodes)
+                    .unwrap_or(usize::MAX),
+            },
+        })
+        .map_err(|error| format!("transport: encode internal Rust shadow request: {error}"))?;
+
+        let mut go_command = Command::new(&tsfacts_binary);
+        go_command.current_dir(&case_directory);
+        let go = run_child(&mut go_command, &go_request)
+            .map_err(|error| format!("transport: Go serving child: {error}"))?;
+        require_success("Go serving", &go)?;
+        SemanticSnapshot::from_json_lines(BufReader::new(go.stdout.as_slice()))
+            .map_err(|error| format!("transport: decode Go serving output: {error}"))?;
+        observe_process(&mut sample, &mut resident_methods, &go, true);
+
+        let expected_go_response = go.stdout.clone();
+        let mut rust_process = None;
+        let decision = controller.serve_with_shadow(Ok(expected_go_response.clone()), || {
+            let mut rust_command = Command::new(&rust_executable);
+            rust_command
+                .arg("primitive-shadow-worker")
+                .arg(&case_directory);
+            let observation = run_child(&mut rust_command, &shadow_request)
+                .map_err(|error| format!("transport: Rust shadow child: {error}"))?;
+            require_success("Rust shadow", &observation)?;
+            validate_shadow_output(&observation.stdout, request.selections.len())?;
+            let response = observation.stdout.clone();
+            rust_process = Some(observation);
+            Ok(response)
+        })?;
+
+        sample.served_go_responses_unchanged &= decision.served_response == expected_go_response;
+        match decision.shadow_observation {
+            ShadowObservation::Observed => {
+                let rust = rust_process.as_ref().ok_or_else(|| {
+                    "transport: observed Rust shadow has no process result".to_owned()
+                })?;
+                observe_process(&mut sample, &mut resident_methods, rust, false);
+            }
+            ShadowObservation::FailedAndRolledBack => {
+                sample.shadow_observation_failures += 1;
+            }
+            ShadowObservation::SkippedAfterRollback => {
+                return Err(
+                    "transport: normal measurement unexpectedly skipped the Rust shadow".to_owned(),
+                );
+            }
+        }
+        sample.cases += 1;
+    }
+
+    sample.resident_measurement = resident_methods
+        .iter()
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(",");
+    sample.memory_comparable = sample.go_peak_resident_bytes.is_some()
+        && sample.rust_peak_resident_bytes.is_some()
+        && resident_methods.len() == 1;
+    Ok(sample)
+}
+
+fn primitive_selections(
+    request: &ProducerRequest<'_>,
+) -> Result<Vec<PrimitiveLiteralSelection>, String> {
+    request
+        .selections
+        .iter()
+        .map(|selection| {
+            Ok(PrimitiveLiteralSelection {
+                file: selection.file.clone(),
+                span: Span {
+                    start: u32::try_from(selection.start)
+                        .map_err(|_| "selection start exceeds u32")?,
+                    end: u32::try_from(selection.end).map_err(|_| "selection end exceeds u32")?,
+                },
+            })
+        })
+        .collect()
+}
+
+fn require_success(name: &str, observation: &ProcessObservation) -> Result<(), String> {
+    if observation.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name} exited with {}: {}",
+            observation.status,
+            String::from_utf8_lossy(&observation.stderr).trim()
+        ))
+    }
+}
+
+fn validate_shadow_output(bytes: &[u8], expected_candidates: usize) -> Result<(), String> {
+    let output: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|error| format!("transport: decode internal Rust shadow output: {error}"))?;
+    let producer_version = output
+        .get("producerVersion")
+        .and_then(serde_json::Value::as_u64);
+    let candidates = output
+        .get("candidates")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::len);
+    if producer_version != Some(u64::from(INDEPENDENT_PRIMITIVE_LITERAL_PRODUCER_VERSION))
+        || candidates != Some(expected_candidates)
+    {
+        return Err(format!(
+            "transport: Rust shadow output contract mismatch: producerVersion={producer_version:?}, candidates={candidates:?}, expectedCandidates={expected_candidates}"
+        ));
+    }
+    Ok(())
+}
+
+fn observe_process(
+    sample: &mut MeasurementSample,
+    resident_methods: &mut BTreeSet<String>,
+    observation: &ProcessObservation,
+    go: bool,
+) {
+    resident_methods.insert(observation.resident_measurement.to_owned());
+    if go {
+        sample.go_serving_wall_nanoseconds = sample
+            .go_serving_wall_nanoseconds
+            .saturating_add(observation.wall_nanoseconds);
+        sample.go_served_output_bytes = sample
+            .go_served_output_bytes
+            .saturating_add(observation.stdout.len());
+        sample.go_peak_resident_bytes = max_option(
+            sample.go_peak_resident_bytes,
+            observation.peak_resident_bytes,
+        );
+    } else {
+        sample.rust_shadow_wall_nanoseconds = sample
+            .rust_shadow_wall_nanoseconds
+            .saturating_add(observation.wall_nanoseconds);
+        sample.rust_shadow_output_bytes = sample
+            .rust_shadow_output_bytes
+            .saturating_add(observation.stdout.len());
+        sample.rust_peak_resident_bytes = max_option(
+            sample.rust_peak_resident_bytes,
+            observation.peak_resident_bytes,
+        );
+    }
+}
+
+fn max_option(left: Option<u64>, right: Option<u64>) -> Option<u64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left.max(right)),
+        (left, right) => left.or(right),
+    }
+}
+
+fn exercise_failure_paths() -> FailurePathEvidence {
+    let expected = b"go-serving-response".to_vec();
+    let mut controller = ServingShadowController::default();
+    let failed = controller
+        .serve_with_shadow(Ok(expected.clone()), || {
+            Err("forced shadow failure".to_owned())
+        })
+        .expect("the Go response remains serviceable after a shadow failure");
+    let go_response_survives_shadow_failure = failed.served_response == expected;
+    let shadow_failure_is_observed =
+        failed.shadow_observation == ShadowObservation::FailedAndRolledBack;
+    let shadow_failure_detail_retained =
+        failed.shadow_failure.as_deref() == Some("forced shadow failure");
+    let rollback_disables_shadow = !controller.shadow_enabled();
+
+    let mut shadow_called = false;
+    let skipped = controller
+        .serve_with_shadow(Ok(expected.clone()), || {
+            shadow_called = true;
+            Ok(Vec::new())
+        })
+        .expect("the rolled-back shadow cannot affect Go serving");
+    let rolled_back_request_skips_shadow = !shadow_called
+        && skipped.served_response == expected
+        && skipped.shadow_observation == ShadowObservation::SkippedAfterRollback;
+
+    controller.reset_shadow();
+    let reset = controller
+        .serve_with_shadow(Ok(expected), || Ok(b"shadow-response".to_vec()))
+        .expect("an explicit reset re-enables shadow observation");
+    let explicit_reset_reenables_shadow =
+        controller.shadow_enabled() && reset.shadow_observation == ShadowObservation::Observed;
+
+    let mut authority_failure_controller = ServingShadowController::default();
+    let mut authority_shadow_called = false;
+    let authority_failure = authority_failure_controller.serve_with_shadow(
+        Err("forced Go authority failure".to_owned()),
+        || {
+            authority_shadow_called = true;
+            Ok(Vec::new())
+        },
+    );
+    let go_failure_is_not_masked = authority_failure.is_err() && !authority_shadow_called;
+
+    FailurePathEvidence {
+        go_response_survives_shadow_failure,
+        shadow_failure_is_observed,
+        shadow_failure_detail_retained,
+        rollback_disables_shadow,
+        rolled_back_request_skips_shadow,
+        explicit_reset_reenables_shadow,
+        go_failure_is_not_masked,
+    }
 }
 
 fn compatibility_threshold() -> CompatibilityThreshold {
@@ -771,7 +1056,7 @@ fn compiler_identity(cases: &[ConformanceCase]) -> Result<(String, String), Stri
     Ok((version, revision))
 }
 
-fn authority_readiness(cases: &[ConformanceCase]) -> AuthorityReadiness {
+fn authority_readiness(cases: &[ConformanceCase], evidence_ready: bool) -> AuthorityReadiness {
     let resolved_rollout_limitations = cases
         .iter()
         .flat_map(|case| {
@@ -790,18 +1075,32 @@ fn authority_readiness(cases: &[ConformanceCase]) -> AuthorityReadiness {
             })
         })
         .collect();
-    let blockers = vec![
-        "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised"
-            .to_owned(),
-        "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected"
-            .to_owned(),
-        "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
-            .to_owned(),
-    ];
+    let blockers = if evidence_ready {
+        Vec::new()
+    } else {
+        vec![
+            "production-boundary conformance, determinism, failure-path, or comparable-measurement evidence did not pass"
+                .to_owned(),
+        ]
+    };
     AuthorityReadiness {
-        ready_for_later_authority_decision: false,
-        status: "not-ready",
+        ready_for_later_authority_decision: evidence_ready,
+        status: if evidence_ready {
+            "evidence-ready-authority-unchanged"
+        } else {
+            "not-ready"
+        },
         resolved_rollout_limitations,
+        remaining_caveats: vec![
+            "the four unsupported primitive/literal selections and three recovery-file mapping gaps remain explicitly fixture-classified limitations"
+                .to_owned(),
+            "raw producer-output byte counts characterize different internal payload schemas and are not protocol-parity evidence"
+                .to_owned(),
+            "sequential one-shot process samples characterize the selected boundary; they are not daemon throughput or latency benchmarks"
+                .to_owned(),
+            "peak resident memory uses Unix wait4 rusage and requires a separately justified method on non-Unix platforms"
+                .to_owned(),
+        ],
         blockers,
     }
 }
@@ -1722,10 +2021,6 @@ fn ratio_ppm(numerator: usize, denominator: usize) -> u64 {
     }
 }
 
-fn duration_nanoseconds(value: u128) -> u64 {
-    u64::try_from(value).unwrap_or(u64::MAX)
-}
-
 fn tool_version(command: &str, args: &[&str]) -> String {
     Command::new(command)
         .args(args)
@@ -1933,7 +2228,7 @@ mod tests {
     }
 
     #[test]
-    fn exact_shadow_conformance_does_not_imply_authority_readiness() {
+    fn exact_shadow_conformance_requires_boundary_evidence_for_readiness() {
         let summary = ConformanceSummary {
             supported_records: 29,
             matched_supported_records: 29,
@@ -1950,10 +2245,20 @@ mod tests {
         };
 
         assert!(threshold_passes(&summary, compatibility_threshold()));
-        let readiness = authority_readiness(&[]);
+        let readiness = authority_readiness(&[], false);
         assert!(!readiness.ready_for_later_authority_decision);
         assert_eq!(readiness.status, "not-ready");
         assert!(readiness.resolved_rollout_limitations.is_empty());
-        assert_eq!(readiness.blockers.len(), 3);
+        assert_eq!(readiness.blockers.len(), 1);
+
+        let ready = authority_readiness(&[], true);
+        assert!(ready.ready_for_later_authority_decision);
+        assert_eq!(ready.status, "evidence-ready-authority-unchanged");
+        assert!(ready.blockers.is_empty());
+    }
+
+    #[test]
+    fn reported_failure_paths_are_executable_and_pass() {
+        assert!(exercise_failure_paths().passes());
     }
 }

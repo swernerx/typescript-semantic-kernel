@@ -7,6 +7,7 @@ pub mod fixture;
 pub mod inspector;
 pub mod oxc;
 pub mod primitive_producer;
+pub mod serving;
 
 #[cfg(test)]
 mod tests {
