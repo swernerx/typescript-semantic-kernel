@@ -234,6 +234,37 @@ IDs rather than mechanically translating Go pointer graphs. Compare every Rust
 result with the Go oracle. Replace the Go backend only category by category and
 only at an explicit compatibility threshold.
 
+## Phase 3/4 spike evidence (2026-08-17)
+
+Issue #20 ran all six representative corpus cases through the real one-shot
+`tsfacts` process, schema-v1 JSON Lines decoder, project-file OXC correlation,
+TypeFacts attachment, and bounded Rust graph inspector. The exact command,
+host/toolchain details, per-case timings, counters, diagnostics, and artifact
+measurements are recorded in
+[`docs/evidence/ts7-oxc-spike-2026-08-17.json`](../docs/evidence/ts7-oxc-spike-2026-08-17.json).
+
+The Go producer emitted 25 facts. OXC parsed five of six selected files and all
+22 facts in those valid files mapped and attached: 15 exact, seven normalized,
+zero unmapped or ambiguous, and zero actual-root transport mismatches. The
+intentional syntax-recovery file remained a named consumer failure with three
+Go facts; it was not removed from the denominator or treated as an exporter
+failure. The inspected graph preserved 6,368 edges and substantial shared
+identity while separately reporting producer states and consumer cutoffs.
+
+The local aggregate first/repeated one-shot times were 634,312,462 ns and
+247,002,000 ns. The debug Rust executable was 13,425,232 bytes and peak measured
+RSS was 11,829,248 bytes. These numbers characterize this spike host only. They
+do not answer the open daemon/long-lived-process question or establish a
+general performance claim.
+
+This evidence approves mechanical porting of occurrence identity, correlation,
+response-global fact indexing, and side-table attachment behind the Go oracle.
+It approves no semantic checker category for replacement. Primitive/literal
+record construction is the first proposed independent Rust semantic candidate,
+but decoding Go-produced roots and correlating syntax is not semantic
+equivalence. ADR-0016 defines the compatibility gates and lists the semantic
+areas that remain Go-authoritative.
+
 ## Considered alternatives
 
 ### Prune TypeScript 7 immediately
@@ -307,7 +338,8 @@ This RFC can move from Proposed to Accepted when a Phase 0 spike demonstrates:
 - Which portions of the type graph require exact structure in version 1, and
   which may initially be represented as opaque or truncated?
 - What compatibility threshold should a future Rust category meet before it can
-  replace the Go result?
+  replace the Go result? ADR-0016 defines the first gate; it must be revisited
+  with independent Rust semantic output before replacement.
 - Should the eventual public name be `tsfacts`, `TypeScript Semantic Kernel`, or
   another name that avoids implying an alternate TypeScript language?
 

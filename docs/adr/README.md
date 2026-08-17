@@ -23,3 +23,4 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0013](0013-correlate-occurrences-through-consumer-node-anchors.md) | Accepted | Correlate occurrences through consumer node anchors |
 | [0014](0014-isolate-the-oxc-reference-consumer.md) | Accepted | Isolate the OXC reference consumer |
 | [0015](0015-attach-semantic-facts-without-expanding-graph-identity.md) | Accepted | Attach semantic facts without expanding graph identity |
+| [0016](0016-port-occurrence-attachment-before-semantic-categories.md) | Accepted | Port occurrence attachment before semantic categories |

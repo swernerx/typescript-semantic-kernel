@@ -15,7 +15,7 @@ func TestCanonicalJSONLinesFixturesRoundTrip(t *testing.T) {
 	t.Parallel()
 	fixtures, err := filepath.Glob("testdata/canonical/v0/*.jsonl")
 	assert.NilError(t, err)
-	assert.Equal(t, len(fixtures), 5)
+	assert.Equal(t, len(fixtures), 6)
 	for _, fixture := range fixtures {
 		t.Run(filepath.Base(fixture), func(t *testing.T) {
 			t.Parallel()

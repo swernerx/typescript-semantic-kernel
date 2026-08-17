@@ -1,0 +1,761 @@
+{
+    "schemaVersion": 1,
+    "evidenceKind": "ts7-go-to-internal-oxc-rust-spike",
+    "comparisonScope": "wire-identity-attachment-and-bounded-inspection-only",
+    "environment": {
+        "operatingSystem": "macos",
+        "architecture": "aarch64",
+        "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+        "go": "go version go1.26.6 darwin/arm64",
+        "command": "./internal/oxc_reference/run-evidence.sh --output <path>"
+    },
+    "inspectorLimits": {
+        "maxDepth": 32,
+        "maxNodes": 4096,
+        "maxEdges": 16384
+    },
+    "cases": [
+        {
+            "name": "advanced-types",
+            "sourceFiles": [
+                "src/advanced.ts"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 410904667,
+                "consumerNanoseconds": 14694333,
+                "totalNanoseconds": 425599000,
+                "snapshotBytes": 97176
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 31503500,
+                "consumerNanoseconds": 9212583,
+                "totalNanoseconds": 40716083,
+                "snapshotBytes": 97176
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 6,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 128,
+                            "maxTypeDepth": 8
+                        },
+                        "typeNodesUsed": 128,
+                        "maxTypeDepthObserved": 8,
+                        "truncated": true
+                    },
+                    "files": 12,
+                    "facts": 6,
+                    "records": {
+                        "types": 129,
+                        "declarations": 162,
+                        "symbols": 131,
+                        "signatures": 35,
+                        "edges": 753
+                    },
+                    "entityStates": {
+                        "complete": 223,
+                        "truncated": 71,
+                        "unsupported": 0,
+                        "error": 1
+                    },
+                    "sharedEdgeReferences": 304,
+                    "edgeReferences": 753,
+                    "sharingRatioPpm": 403718
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 1,
+                    "failedFiles": 0,
+                    "mapping": {
+                        "facts": 6,
+                        "mapped": 6,
+                        "exact": 0,
+                        "normalized": 6,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [
+                        {
+                            "syntaxKind": "KindIdentifier",
+                            "metrics": {
+                                "facts": 6,
+                                "mapped": 6,
+                                "exact": 0,
+                                "normalized": 6,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        }
+                    ],
+                    "attachedFacts": 6,
+                    "inspectedNodes": 453,
+                    "inspectedEdges": 741,
+                    "inspectorBudgetTruncatedFacts": 0,
+                    "inspectionDiagnostics": {
+                        "entity-error": 3,
+                        "entity-truncated": 69,
+                        "root-inapplicable": 6
+                    }
+                },
+                "comparison": {
+                    "goOracleFacts": 6,
+                    "identityMappedFacts": 6,
+                    "actualRootsTransportPreserved": 6,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": []
+                },
+                "diagnostics": []
+            }
+        },
+        {
+            "name": "callables-generics",
+            "sourceFiles": [
+                "src/callables.ts"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 33103167,
+                "consumerNanoseconds": 27337667,
+                "totalNanoseconds": 60440834,
+                "snapshotBytes": 319704
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 32238208,
+                "consumerNanoseconds": 27054041,
+                "totalNanoseconds": 59292249,
+                "snapshotBytes": 319704
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 0,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 4096,
+                            "maxTypeDepth": 32
+                        },
+                        "typeNodesUsed": 299,
+                        "maxTypeDepthObserved": 33,
+                        "truncated": true
+                    },
+                    "files": 1,
+                    "facts": 2,
+                    "records": {
+                        "types": 300,
+                        "declarations": 21,
+                        "symbols": 307,
+                        "signatures": 389,
+                        "edges": 3716
+                    },
+                    "entityStates": {
+                        "complete": 27,
+                        "truncated": 968,
+                        "unsupported": 0,
+                        "error": 1
+                    },
+                    "sharedEdgeReferences": 2701,
+                    "edgeReferences": 3716,
+                    "sharingRatioPpm": 726856
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 1,
+                    "failedFiles": 0,
+                    "mapping": {
+                        "facts": 2,
+                        "mapped": 2,
+                        "exact": 2,
+                        "normalized": 0,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [
+                        {
+                            "syntaxKind": "KindIdentifier",
+                            "metrics": {
+                                "facts": 2,
+                                "mapped": 2,
+                                "exact": 2,
+                                "normalized": 0,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        }
+                    ],
+                    "attachedFacts": 2,
+                    "inspectedNodes": 522,
+                    "inspectedEdges": 1798,
+                    "inspectorBudgetTruncatedFacts": 1,
+                    "inspectionDiagnostics": {
+                        "entity-error": 1,
+                        "entity-truncated": 475,
+                        "max-depth": 15,
+                        "root-unavailable": 2
+                    }
+                },
+                "comparison": {
+                    "goOracleFacts": 2,
+                    "identityMappedFacts": 2,
+                    "actualRootsTransportPreserved": 2,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": []
+                },
+                "diagnostics": []
+            }
+        },
+        {
+            "name": "core-graph",
+            "sourceFiles": [
+                "src/core.ts"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 29939167,
+                "consumerNanoseconds": 3022625,
+                "totalNanoseconds": 32961792,
+                "snapshotBytes": 24108
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 30175500,
+                "consumerNanoseconds": 2926208,
+                "totalNanoseconds": 33101708,
+                "snapshotBytes": 24108
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 0,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 4096,
+                            "maxTypeDepth": 32
+                        },
+                        "typeNodesUsed": 50,
+                        "maxTypeDepthObserved": 5,
+                        "truncated": false
+                    },
+                    "files": 1,
+                    "facts": 3,
+                    "records": {
+                        "types": 50,
+                        "declarations": 21,
+                        "symbols": 31,
+                        "signatures": 4,
+                        "edges": 171
+                    },
+                    "entityStates": {
+                        "complete": 52,
+                        "truncated": 32,
+                        "unsupported": 0,
+                        "error": 1
+                    },
+                    "sharedEdgeReferences": 68,
+                    "edgeReferences": 171,
+                    "sharingRatioPpm": 397660
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 1,
+                    "failedFiles": 0,
+                    "mapping": {
+                        "facts": 3,
+                        "mapped": 3,
+                        "exact": 2,
+                        "normalized": 1,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [
+                        {
+                            "syntaxKind": "KindIdentifier",
+                            "metrics": {
+                                "facts": 3,
+                                "mapped": 3,
+                                "exact": 2,
+                                "normalized": 1,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        }
+                    ],
+                    "attachedFacts": 3,
+                    "inspectedNodes": 105,
+                    "inspectedEdges": 165,
+                    "inspectorBudgetTruncatedFacts": 0,
+                    "inspectionDiagnostics": {
+                        "entity-error": 2,
+                        "entity-truncated": 30,
+                        "root-inapplicable": 1,
+                        "root-unavailable": 2
+                    }
+                },
+                "comparison": {
+                    "goOracleFacts": 3,
+                    "identityMappedFacts": 3,
+                    "actualRootsTransportPreserved": 3,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": []
+                },
+                "diagnostics": []
+            }
+        },
+        {
+            "name": "occurrence-contexts",
+            "sourceFiles": [
+                "src/app.tsx"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 33288459,
+                "consumerNanoseconds": 20287584,
+                "totalNanoseconds": 53576043,
+                "snapshotBytes": 187076
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 33201959,
+                "consumerNanoseconds": 20090917,
+                "totalNanoseconds": 53292876,
+                "snapshotBytes": 187076
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 1,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 128,
+                            "maxTypeDepth": 8
+                        },
+                        "typeNodesUsed": 128,
+                        "maxTypeDepthObserved": 9,
+                        "truncated": true
+                    },
+                    "files": 23,
+                    "facts": 7,
+                    "records": {
+                        "types": 130,
+                        "declarations": 331,
+                        "symbols": 354,
+                        "signatures": 52,
+                        "edges": 1556
+                    },
+                    "entityStates": {
+                        "complete": 304,
+                        "truncated": 231,
+                        "unsupported": 0,
+                        "error": 1
+                    },
+                    "sharedEdgeReferences": 695,
+                    "edgeReferences": 1556,
+                    "sharingRatioPpm": 446658
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 1,
+                    "failedFiles": 0,
+                    "mapping": {
+                        "facts": 7,
+                        "mapped": 7,
+                        "exact": 7,
+                        "normalized": 0,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [
+                        {
+                            "syntaxKind": "KindIdentifier",
+                            "metrics": {
+                                "facts": 6,
+                                "mapped": 6,
+                                "exact": 6,
+                                "normalized": 0,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        },
+                        {
+                            "syntaxKind": "KindStringLiteral",
+                            "metrics": {
+                                "facts": 1,
+                                "mapped": 1,
+                                "exact": 1,
+                                "normalized": 0,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        }
+                    ],
+                    "attachedFacts": 7,
+                    "inspectedNodes": 1689,
+                    "inspectedEdges": 3052,
+                    "inspectorBudgetTruncatedFacts": 0,
+                    "inspectionDiagnostics": {
+                        "entity-error": 5,
+                        "entity-truncated": 448,
+                        "root-inapplicable": 1,
+                        "root-unavailable": 5
+                    }
+                },
+                "comparison": {
+                    "goOracleFacts": 7,
+                    "identityMappedFacts": 7,
+                    "actualRootsTransportPreserved": 7,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": []
+                },
+                "diagnostics": []
+            }
+        },
+        {
+            "name": "recovery-budgets",
+            "sourceFiles": [
+                "src/recovery.ts"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 29371250,
+                "consumerNanoseconds": 1029834,
+                "totalNanoseconds": 30401084,
+                "snapshotBytes": 10175
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 28880625,
+                "consumerNanoseconds": 1057042,
+                "totalNanoseconds": 29937667,
+                "snapshotBytes": 10175
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 2,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 128,
+                            "maxTypeDepth": 2
+                        },
+                        "typeNodesUsed": 14,
+                        "maxTypeDepthObserved": 3,
+                        "truncated": true
+                    },
+                    "files": 1,
+                    "facts": 3,
+                    "records": {
+                        "types": 15,
+                        "declarations": 6,
+                        "symbols": 14,
+                        "signatures": 0,
+                        "edges": 49
+                    },
+                    "entityStates": {
+                        "complete": 9,
+                        "truncated": 18,
+                        "unsupported": 0,
+                        "error": 2
+                    },
+                    "sharedEdgeReferences": 17,
+                    "edgeReferences": 49,
+                    "sharingRatioPpm": 346938
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 0,
+                    "failedFiles": 1,
+                    "mapping": {
+                        "facts": 0,
+                        "mapped": 0,
+                        "exact": 0,
+                        "normalized": 0,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [],
+                    "attachedFacts": 0,
+                    "inspectedNodes": 0,
+                    "inspectedEdges": 0,
+                    "inspectorBudgetTruncatedFacts": 0,
+                    "inspectionDiagnostics": {}
+                },
+                "comparison": {
+                    "goOracleFacts": 3,
+                    "identityMappedFacts": 0,
+                    "actualRootsTransportPreserved": 0,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": [
+                        {
+                            "factIndex": 0,
+                            "file": "src/recovery.ts",
+                            "syntaxKind": "KindIdentifier",
+                            "code": "consumer-file-failed"
+                        },
+                        {
+                            "factIndex": 1,
+                            "file": "src/recovery.ts",
+                            "syntaxKind": "KindIdentifier",
+                            "code": "consumer-file-failed"
+                        },
+                        {
+                            "factIndex": 2,
+                            "file": "src/recovery.ts",
+                            "syntaxKind": "KindIdentifier",
+                            "code": "consumer-file-failed"
+                        }
+                    ]
+                },
+                "diagnostics": [
+                    {
+                        "layer": "consumer",
+                        "code": "oxc-parse-or-semantic-error",
+                        "file": "src/recovery.ts",
+                        "message": "OXC failed to parse \"src/recovery.ts\": 1 diagnostic(s), panicked=true"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "vertical-slice",
+            "sourceFiles": [
+                "src/vertical.ts"
+            ],
+            "firstPass": {
+                "producerNanoseconds": 28862250,
+                "consumerNanoseconds": 2471459,
+                "totalNanoseconds": 31333709,
+                "snapshotBytes": 19518
+            },
+            "repeatedPass": {
+                "producerNanoseconds": 28236750,
+                "consumerNanoseconds": 2424667,
+                "totalNanoseconds": 30661417,
+                "snapshotBytes": 19518
+            },
+            "repeatedObservationsEqual": true,
+            "observation": {
+                "producer": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 0,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 128,
+                            "maxTypeDepth": 3
+                        },
+                        "typeNodesUsed": 26,
+                        "maxTypeDepthObserved": 4,
+                        "truncated": true
+                    },
+                    "files": 1,
+                    "facts": 4,
+                    "records": {
+                        "types": 27,
+                        "declarations": 15,
+                        "symbols": 29,
+                        "signatures": 2,
+                        "edges": 123
+                    },
+                    "entityStates": {
+                        "complete": 16,
+                        "truncated": 41,
+                        "unsupported": 0,
+                        "error": 1
+                    },
+                    "sharedEdgeReferences": 53,
+                    "edgeReferences": 123,
+                    "sharingRatioPpm": 430894
+                },
+                "consumer": {
+                    "sourceFiles": 1,
+                    "parsedFiles": 1,
+                    "failedFiles": 0,
+                    "mapping": {
+                        "facts": 4,
+                        "mapped": 4,
+                        "exact": 4,
+                        "normalized": 0,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    },
+                    "bySyntaxKind": [
+                        {
+                            "syntaxKind": "KindIdentifier",
+                            "metrics": {
+                                "facts": 4,
+                                "mapped": 4,
+                                "exact": 4,
+                                "normalized": 0,
+                                "unmapped": 0,
+                                "multiplyMapped": 0
+                            }
+                        }
+                    ],
+                    "attachedFacts": 4,
+                    "inspectedNodes": 114,
+                    "inspectedEdges": 194,
+                    "inspectorBudgetTruncatedFacts": 0,
+                    "inspectionDiagnostics": {
+                        "entity-error": 1,
+                        "entity-truncated": 60,
+                        "root-unavailable": 3
+                    }
+                },
+                "comparison": {
+                    "goOracleFacts": 4,
+                    "identityMappedFacts": 4,
+                    "actualRootsTransportPreserved": 4,
+                    "semanticEquivalenceClaims": 0,
+                    "differences": []
+                },
+                "diagnostics": []
+            }
+        }
+    ],
+    "totals": {
+        "producer": {
+            "typescriptVersion": "7.1.0-dev",
+            "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+            "diagnosticCount": 9,
+            "budgets": {
+                "limits": {
+                    "maxTypeNodes": 4096,
+                    "maxTypeDepth": 32
+                },
+                "typeNodesUsed": 645,
+                "maxTypeDepthObserved": 33,
+                "truncated": true
+            },
+            "files": 39,
+            "facts": 25,
+            "records": {
+                "types": 651,
+                "declarations": 556,
+                "symbols": 866,
+                "signatures": 482,
+                "edges": 6368
+            },
+            "entityStates": {
+                "complete": 631,
+                "truncated": 1361,
+                "unsupported": 0,
+                "error": 7
+            },
+            "sharedEdgeReferences": 3838,
+            "edgeReferences": 6368,
+            "sharingRatioPpm": 602701
+        },
+        "consumer": {
+            "sourceFiles": 6,
+            "parsedFiles": 5,
+            "failedFiles": 1,
+            "mapping": {
+                "facts": 22,
+                "mapped": 22,
+                "exact": 15,
+                "normalized": 7,
+                "unmapped": 0,
+                "multiplyMapped": 0
+            },
+            "bySyntaxKind": [
+                {
+                    "syntaxKind": "KindIdentifier",
+                    "metrics": {
+                        "facts": 21,
+                        "mapped": 21,
+                        "exact": 14,
+                        "normalized": 7,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    }
+                },
+                {
+                    "syntaxKind": "KindStringLiteral",
+                    "metrics": {
+                        "facts": 1,
+                        "mapped": 1,
+                        "exact": 1,
+                        "normalized": 0,
+                        "unmapped": 0,
+                        "multiplyMapped": 0
+                    }
+                }
+            ],
+            "attachedFacts": 22,
+            "inspectedNodes": 2883,
+            "inspectedEdges": 5950,
+            "inspectorBudgetTruncatedFacts": 1,
+            "inspectionDiagnostics": {
+                "entity-error": 12,
+                "entity-truncated": 1082,
+                "max-depth": 15,
+                "root-inapplicable": 8,
+                "root-unavailable": 12
+            }
+        },
+        "comparison": {
+            "goOracleFacts": 25,
+            "identityMappedFacts": 22,
+            "actualRootsTransportPreserved": 22,
+            "semanticEquivalenceClaims": 0,
+            "differences": [
+                {
+                    "factIndex": 0,
+                    "file": "src/recovery.ts",
+                    "syntaxKind": "KindIdentifier",
+                    "code": "consumer-file-failed"
+                },
+                {
+                    "factIndex": 1,
+                    "file": "src/recovery.ts",
+                    "syntaxKind": "KindIdentifier",
+                    "code": "consumer-file-failed"
+                },
+                {
+                    "factIndex": 2,
+                    "file": "src/recovery.ts",
+                    "syntaxKind": "KindIdentifier",
+                    "code": "consumer-file-failed"
+                }
+            ]
+        },
+        "diagnostics": [
+            {
+                "layer": "consumer",
+                "code": "oxc-parse-or-semantic-error",
+                "file": "src/recovery.ts",
+                "message": "OXC failed to parse \"src/recovery.ts\": 1 diagnostic(s), panicked=true"
+            }
+        ]
+    },
+    "timing": {
+        "firstPassNanoseconds": 634312462,
+        "repeatedPassNanoseconds": 247002000,
+        "caseCount": 6
+    },
+    "artifacts": {
+        "consumerExecutableBytes": 13425232,
+        "peakOrCurrentResidentBytes": 11829248,
+        "residentMeasurement": "macos-getrusage-peak",
+        "totalSnapshotBytes": 1315514
+    },
+    "compatibilityGate": {
+        "firstCandidate": "schema-v1 occurrence identity and attachment plumbing",
+        "decision": "safe-to-mechanically-port-behind-go-oracle; not-safe-to-replace-go-semantics",
+        "requiredMappingCoveragePpm": 1000000,
+        "requiredAmbiguityCount": 0,
+        "requiredTransportMismatchCount": 0,
+        "goAuthoritative": [
+            "project loading and module resolution",
+            "binding and symbol identity",
+            "type construction, inference, contextual typing, and widening",
+            "overload and generic instantiation",
+            "control-flow narrowing",
+            "semantic entity completeness and recovery"
+        ]
+    }
+}

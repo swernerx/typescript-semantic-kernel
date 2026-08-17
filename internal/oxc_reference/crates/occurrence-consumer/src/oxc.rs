@@ -99,12 +99,60 @@ impl<'a> OxcConsumer<'a> {
     /// ownership exactly once. Repeated fact selections are preserved in fact
     /// order rather than overwriting an earlier attachment to the same node.
     pub fn attach(&mut self, snapshot: Arc<SemanticSnapshot>) -> Result<Report, String> {
-        let occurrences = snapshot
+        if snapshot.facts().iter().any(|fact| fact.file != self.file) {
+            return Err(format!(
+                "all facts must belong to consumer file {:?}",
+                self.file
+            ));
+        }
+        let fact_indices = (0..snapshot.facts().len()).collect::<Vec<_>>();
+        self.attach_fact_indices(snapshot, &fact_indices)
+    }
+
+    /// Attaches the facts for this source file from a project-wide snapshot.
+    /// Mapping and attachment indices remain response-global fact indices.
+    pub fn attach_file(&mut self, snapshot: Arc<SemanticSnapshot>) -> Result<Report, String> {
+        let fact_indices = snapshot
             .facts()
             .iter()
-            .map(OccurrenceTypeFacts::occurrence)
+            .enumerate()
+            .filter_map(|(index, fact)| (fact.file == self.file).then_some(index))
             .collect::<Vec<_>>();
-        let report = self.correlate(&occurrences)?;
+        self.attach_fact_indices(snapshot, &fact_indices)
+    }
+
+    fn attach_fact_indices(
+        &mut self,
+        snapshot: Arc<SemanticSnapshot>,
+        fact_indices: &[usize],
+    ) -> Result<Report, String> {
+        let occurrences = fact_indices
+            .iter()
+            .map(|index| {
+                snapshot
+                    .facts()
+                    .get(*index)
+                    .ok_or_else(|| format!("fact index {index} is outside the snapshot"))
+                    .map(OccurrenceTypeFacts::occurrence)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut report = self.correlate(&occurrences)?;
+
+        let local_nodes = std::mem::take(&mut self.mapped_nodes);
+        for mapping in &mut report.mappings {
+            let local_index = mapping.fact_index;
+            let global_index = fact_indices[local_index];
+            let node_id = local_nodes
+                .get(&local_index)
+                .copied()
+                .ok_or_else(|| format!("mapping for local fact {local_index} lost its NodeId"))?;
+            mapping.fact_index = global_index;
+            self.mapped_nodes.insert(global_index, node_id);
+        }
+        for diagnostic in &mut report.diagnostics {
+            diagnostic.fact_index = fact_indices[diagnostic.fact_index];
+        }
+
         self.fact_indices_by_node.clear();
         for mapping in &report.mappings {
             let node_id = self

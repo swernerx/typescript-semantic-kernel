@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod evidence;
 pub mod facts;
 pub mod fixture;
 pub mod inspector;
@@ -313,6 +314,32 @@ mod tests {
             vec![0, 1]
         );
         assert!(std::ptr::eq(attached[0].graph(), attached[1].graph()));
+    }
+
+    #[test]
+    fn project_snapshot_attachment_preserves_response_global_fact_indices() {
+        let snapshot = Arc::new(
+            SemanticSnapshot::from_json_lines(Cursor::new(
+                "{\"record\":\"header\",\"schemaVersion\":1,\"offsetEncoding\":\"utf8-bytes\",\"capabilities\":[]}\n\
+                 {\"record\":\"file\",\"id\":\"src/a.ts\"}\n\
+                 {\"record\":\"file\",\"id\":\"src/b.ts\"}\n\
+                 {\"record\":\"type\",\"id\":\"type:1\",\"typeKind\":\"string\",\"display\":\"string\",\"flags\":[],\"state\":\"complete\",\"complete\":true,\"truncated\":false}\n\
+                 {\"record\":\"fact\",\"file\":\"src/a.ts\",\"span\":{\"start\":0,\"end\":5},\"syntaxKind\":\"KindIdentifier\",\"actualType\":\"type:1\",\"typeAtLocation\":\"type:1\",\"typeViewStates\":{\"actual\":\"available\",\"contextual\":\"inapplicable\",\"widened\":\"same-as-actual\",\"apparent\":\"same-as-actual\",\"declared\":\"same-as-actual\"},\"complete\":true,\"recovered\":false,\"truncated\":false}\n\
+                 {\"record\":\"fact\",\"file\":\"src/b.ts\",\"span\":{\"start\":0,\"end\":5},\"syntaxKind\":\"KindIdentifier\",\"actualType\":\"type:1\",\"typeAtLocation\":\"type:1\",\"typeViewStates\":{\"actual\":\"available\",\"contextual\":\"inapplicable\",\"widened\":\"same-as-actual\",\"apparent\":\"same-as-actual\",\"declared\":\"same-as-actual\"},\"complete\":true,\"recovered\":false,\"truncated\":false}\n",
+            ))
+            .expect("decode multi-file snapshot"),
+        );
+
+        for (file, expected_fact_index) in [("src/a.ts", 0), ("src/b.ts", 1)] {
+            let allocator = Allocator::default();
+            let mut consumer =
+                OxcConsumer::parse(&allocator, file, "value;\n").expect("parse multi-file source");
+            let report = consumer
+                .attach_file(Arc::clone(&snapshot))
+                .expect("attach one project file");
+            assert_eq!(report.mappings[0].fact_index, expected_fact_index);
+            assert!(consumer.node_for_fact(expected_fact_index).is_some());
+        }
     }
 
     fn canonical_fixture_path(name: &str) -> PathBuf {

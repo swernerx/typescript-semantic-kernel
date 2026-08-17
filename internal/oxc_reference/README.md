@@ -33,6 +33,26 @@ The optional final argument overrides the normalized logical file ID used by
 the semantic response. A single-file snapshot otherwise supplies that ID from
 its first fact.
 
+Run the complete TS7-to-consumer evidence slice with one command:
+
+```sh
+./internal/oxc_reference/run-evidence.sh \
+  --output docs/evidence/ts7-oxc-spike-2026-08-17.json
+```
+
+The script builds the real Go `tsfacts` binary and runs every semantic corpus
+case twice. The Rust runner preserves response-global fact indices while
+attaching each project file, compares stable non-timing observations, and emits
+ordered JSON with producer graph counts/budgets, OXC mapping coverage,
+inspection depth/node/edge use, artifact/timing measurements, and diagnostics
+classified as protocol, exporter, mapping, or consumer failures. Timings are
+first and immediately repeated one-shot measurements, not daemon benchmarks.
+
+The checked evidence maps every fact from OXC-parseable sources but records the
+intentional syntax-recovery source as a consumer failure. It does not infer
+semantic equivalence from those mappings. See
+[ADR-0016](../../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md).
+
 The first test suite applies the Rust implementation of the portable contract
 to every shared JSON fixture in `internal/occurrencemap/testdata/v1` and checks
 its complete expected report. It separately parses those fixture sources with
@@ -67,6 +87,11 @@ negotiation in Go. The intended migration sequence is:
 2. compare each Rust category against the Go oracle and shared fixtures;
 3. replace one category at a time only after its compatibility threshold is
    explicit and met.
+
+Occurrence identity and attachment plumbing is the first approved mechanical
+port category. Primitive/literal record construction is only the next proposed
+semantic candidate; all semantic answers remain Go-authoritative until an
+independent Rust producer passes ADR-0016's differential gate.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.
