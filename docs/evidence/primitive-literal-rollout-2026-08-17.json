@@ -1,0 +1,3983 @@
+{
+    "schemaVersion": 1,
+    "evidenceKind": "primitive-literal-controlled-go-rust-dual-run",
+    "command": "./internal/oxc_reference/run-rollout.sh --output <path>",
+    "environment": {
+        "operatingSystem": "macos",
+        "architecture": "aarch64",
+        "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+        "go": "go version go1.26.6 darwin/arm64",
+        "buildProfile": "release"
+    },
+    "authority": {
+        "servingAuthority": "go",
+        "productionFallback": "go",
+        "rustMode": "shadow-only",
+        "authoritySwitch": false,
+        "ts7ProducerProtocolChanged": false,
+        "externalConsumerBehaviorChanged": false
+    },
+    "determinism": {
+        "completeRuns": 2,
+        "conformanceReportsByteEqual": true,
+        "compactConformanceReportBytes": 52766
+    },
+    "conformance": {
+        "schemaVersion": 4,
+        "gateKind": "go-vs-independent-rust-semantic-conformance",
+        "candidate": "independent-primitive-literal-v2",
+        "shadowOnly": true,
+        "execution": {
+            "repositoryRevision": "24c138ae4c7a2b9a42c1e68eb25329fbf8a3a5a9",
+            "typescriptVersion": "7.1.0-dev",
+            "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+            "requestSchemaVersion": 1,
+            "corpusPath": "internal/semanticfacts/testdata/corpus/v0",
+            "goSemanticAuthority": true,
+            "rustMode": "shadow-only",
+            "ts7ProducerProtocolChanged": false,
+            "externalConsumerBehaviorChanged": false
+        },
+        "threshold": {
+            "minimumSupportedRecords": 15,
+            "requiredSupportedCompatibilityPpm": 1000000,
+            "maxUnexplainedSemanticDifferences": 0,
+            "maxUnexplainedTransportDifferences": 0,
+            "maxUnexplainedMappingDifferences": 0,
+            "unsupportedAndBudgetDifferencesAreExpected": true
+        },
+        "corpus": {
+            "discoveredCases": 9,
+            "selectedCases": 4,
+            "selectedFacts": 28,
+            "excludedCases": [
+                "advanced-types",
+                "callables-generics",
+                "core-graph",
+                "occurrence-contexts",
+                "vertical-slice"
+            ]
+        },
+        "cases": [
+            {
+                "name": "primitive-literal-budget",
+                "facts": 1,
+                "request": {
+                    "schemaVersion": 1,
+                    "project": "tsconfig.json",
+                    "requiredCapabilities": [
+                        "occurrence.type-views",
+                        "types.core-composite"
+                    ],
+                    "budgets": {
+                        "maxTypeNodes": 2,
+                        "maxTypeDepth": 16
+                    },
+                    "selections": 1
+                },
+                "repeatedRustOutputEqual": true,
+                "classifications": {
+                    "supported": 0,
+                    "unsupported": 0,
+                    "budget": 1,
+                    "mapping": 0
+                },
+                "selections": [
+                    {
+                        "factIndex": 0,
+                        "proves": "both producers expose a bounded literal-union response instead of hiding it",
+                        "expectedClassification": "budget",
+                        "expectedCode": "type-budget-exceeded",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/budget.ts",
+                                "span": {
+                                    "start": 105,
+                                    "end": 116
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": false,
+                                "id": "type:1",
+                                "literal": null,
+                                "members": [
+                                    "type:2",
+                                    "type:3",
+                                    "type:3",
+                                    "type:3",
+                                    "type:3",
+                                    "type:3"
+                                ],
+                                "state": "truncated",
+                                "truncated": true,
+                                "typeKind": "union"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/budget.ts",
+                                "span": {
+                                    "start": 105,
+                                    "end": 116
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 21,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:3",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "type-budget-exceeded"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    }
+                ],
+                "goOracle": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 0,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 2,
+                            "maxTypeDepth": 16
+                        },
+                        "typeNodesUsed": 2,
+                        "maxTypeDepthObserved": 1,
+                        "truncated": true
+                    }
+                },
+                "rustProducer": {
+                    "diagnosticCount": 0,
+                    "maxTypeNodes": 2,
+                    "typeNodesUsed": 3,
+                    "truncated": true
+                },
+                "roots": {
+                    "factsWithAllFiveViews": 0,
+                    "comparedRoots": 0,
+                    "identityMatches": 0,
+                    "available": 0,
+                    "sameAsActual": 0,
+                    "inapplicable": 0,
+                    "unavailable": 0
+                },
+                "mapping": {
+                    "facts": 1,
+                    "mapped": 1,
+                    "unmapped": 0,
+                    "failedFiles": 0
+                },
+                "candidateStates": {
+                    "complete": 0,
+                    "truncated": 1,
+                    "unsupported": 0,
+                    "error": 0
+                },
+                "supportedRecords": 0,
+                "matchedSupportedRecords": 0,
+                "supportedCompatibilityPpm": 0,
+                "differences": [
+                    {
+                        "category": "budget",
+                        "code": "type-budget-exceeded",
+                        "expected": true,
+                        "factIndex": 0,
+                        "occurrence": {
+                            "file": "src/budget.ts",
+                            "span": {
+                                "start": 105,
+                                "end": 116
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "budget",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "occurrence": {
+                                "file": "src/budget.ts",
+                                "span": {
+                                    "end": 116,
+                                    "start": 105
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 21,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:3",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 0,
+                                "truncated": 1,
+                                "unsupported": 0
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "truncated",
+                                    "id": "type:3",
+                                    "reasons": [
+                                        "type-budget-exceeded"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the fixture pins explicit response-local budget truncation"
+                    }
+                ]
+            },
+            {
+                "name": "primitive-literal-conformance",
+                "facts": 13,
+                "request": {
+                    "schemaVersion": 1,
+                    "project": "tsconfig.json",
+                    "requiredCapabilities": [
+                        "occurrence.type-views",
+                        "types.core-composite"
+                    ],
+                    "budgets": {
+                        "maxTypeNodes": 512,
+                        "maxTypeDepth": 16
+                    },
+                    "selections": 13
+                },
+                "repeatedRustOutputEqual": true,
+                "classifications": {
+                    "supported": 10,
+                    "unsupported": 3,
+                    "budget": 0,
+                    "mapping": 0
+                },
+                "selections": [
+                    {
+                        "factIndex": 0,
+                        "proves": "literal declaration retains its annotated literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 587,
+                                    "end": 605
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:1",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "declared"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 587,
+                                    "end": 605
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 84,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:1"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:1",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "declared"
+                                    }
+                                },
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 1,
+                        "proves": "standalone literal expression remains a literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 607,
+                                    "end": 619
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:3",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "expression"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 607,
+                                    "end": 619
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "oxcNodeId": 86,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:3",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "expression"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 2,
+                        "proves": "mutable declaration widens a string literal to string",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 621,
+                                    "end": 639
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:4",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "string"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 621,
+                                    "end": 639
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 88,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:4"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:4"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:4"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:4",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "string"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 3,
+                        "proves": "as const prevents literal widening",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 641,
+                                    "end": 655
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:5",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "const-asserted"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 641,
+                                    "end": 655
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 90,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:5"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:5"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:5"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:5",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "const-asserted"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 4,
+                        "proves": "satisfies preserves the literal while supplying string context",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 325,
+                                    "end": 336
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:6",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "satisfied"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 325,
+                                    "end": 336
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "oxcNodeId": 46,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:6"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:4"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:6"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:4",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "string"
+                                    }
+                                },
+                                {
+                                    "id": "type:6",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "satisfied"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 5,
+                        "proves": "annotated initializer retains literal and contextual primitive views",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 388,
+                                    "end": 397
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:7",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "context"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 388,
+                                    "end": 397
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "oxcNodeId": 53,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:7"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:4"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:7"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:4",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "string"
+                                    }
+                                },
+                                {
+                                    "id": "type:7",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "context"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 6,
+                        "proves": "enum-like literal values remain explicitly outside the narrow Rust category",
+                        "expectedClassification": "unsupported",
+                        "expectedCode": "enum-literal-outside-category",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 657,
+                                    "end": 670
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "available"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:8",
+                                "literal": {
+                                    "kind": "enum",
+                                    "value": "ready"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 657,
+                                    "end": 670
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 92,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:8",
+                                    "candidateState": "unsupported",
+                                    "reasons": [
+                                        "unsupported-expression"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 1,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 7,
+                        "proves": "imported value literals are observed without pretending cross-file Rust resolution",
+                        "expectedClassification": "unsupported",
+                        "expectedCode": "cross-file-import-outside-category",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 672,
+                                    "end": 687
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:10",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "imported"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 672,
+                                    "end": 687
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 94,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:9"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:9",
+                                    "candidateState": "unsupported",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 1,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 8,
+                        "proves": "imported literal aliases are observed without pretending cross-file Rust resolution",
+                        "expectedClassification": "unsupported",
+                        "expectedCode": "cross-file-import-outside-category",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 689,
+                                    "end": 701
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": false,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:11",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "imported-type"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 689,
+                                    "end": 701
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 96,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:10",
+                                    "candidateState": "unsupported",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 1,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 9,
+                        "proves": "literal union retains every primitive, literal, and null-like member",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 703,
+                                    "end": 715
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": true,
+                            "recovered": false,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:12",
+                                "literal": null,
+                                "members": [
+                                    "type:13",
+                                    "type:14",
+                                    "type:15",
+                                    "type:16",
+                                    "type:17",
+                                    "type:18"
+                                ],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "union"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 703,
+                                    "end": 715
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 98,
+                            "fact": {
+                                "complete": true,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:17"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:17"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:17"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:17"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:11",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "ready"
+                                    }
+                                },
+                                {
+                                    "id": "type:12",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "number",
+                                        "value": "42"
+                                    }
+                                },
+                                {
+                                    "id": "type:13",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "bigint",
+                                        "value": "42"
+                                    }
+                                },
+                                {
+                                    "id": "type:14",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "boolean",
+                                        "value": "true"
+                                    }
+                                },
+                                {
+                                    "id": "type:15",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "null"
+                                    }
+                                },
+                                {
+                                    "id": "type:16",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "undefined"
+                                    }
+                                },
+                                {
+                                    "id": "type:17",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "union",
+                                        "members": [
+                                            "type:11",
+                                            "type:12",
+                                            "type:13",
+                                            "type:14",
+                                            "type:15",
+                                            "type:16"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 7,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 10,
+                        "proves": "null expression remains null-like",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 717,
+                                    "end": 721
+                                },
+                                "syntaxKind": "KindNullKeyword"
+                            },
+                            "complete": true,
+                            "recovered": false,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:17",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "null"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 717,
+                                    "end": 721
+                                },
+                                "syntaxKind": "KindNullKeyword"
+                            },
+                            "oxcNodeId": 100,
+                            "fact": {
+                                "complete": true,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:15"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:15"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:15"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:15",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "null"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 11,
+                        "proves": "undefined expression remains null-like",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 723,
+                                    "end": 732
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": true,
+                            "recovered": false,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:18",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "undefined"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 723,
+                                    "end": 732
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 102,
+                            "fact": {
+                                "complete": true,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:16"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:16"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:16"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:16"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:16",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "undefined"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 12,
+                        "proves": "void declaration remains null-like",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 734,
+                                    "end": 743
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": true,
+                            "recovered": false,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:19",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "void"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "start": 734,
+                                    "end": 743
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 104,
+                            "fact": {
+                                "complete": true,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:18"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:18"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:18"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:18"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:18",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "void"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    }
+                ],
+                "goOracle": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 0,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 512,
+                            "maxTypeDepth": 16
+                        },
+                        "typeNodesUsed": 19,
+                        "maxTypeDepthObserved": 1,
+                        "truncated": false
+                    }
+                },
+                "rustProducer": {
+                    "diagnosticCount": 0,
+                    "maxTypeNodes": 512,
+                    "typeNodesUsed": 18,
+                    "truncated": false
+                },
+                "roots": {
+                    "factsWithAllFiveViews": 10,
+                    "comparedRoots": 50,
+                    "identityMatches": 50,
+                    "available": 18,
+                    "sameAsActual": 20,
+                    "inapplicable": 4,
+                    "unavailable": 8
+                },
+                "mapping": {
+                    "facts": 13,
+                    "mapped": 13,
+                    "unmapped": 0,
+                    "failedFiles": 0
+                },
+                "candidateStates": {
+                    "complete": 14,
+                    "truncated": 1,
+                    "unsupported": 3,
+                    "error": 0
+                },
+                "supportedRecords": 14,
+                "matchedSupportedRecords": 14,
+                "supportedCompatibilityPpm": 1000000,
+                "differences": [
+                    {
+                        "category": "unsupported",
+                        "code": "enum-literal-outside-category",
+                        "expected": true,
+                        "factIndex": 6,
+                        "occurrence": {
+                            "file": "src/matrix.ts",
+                            "span": {
+                                "start": 657,
+                                "end": 670
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "unsupported",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "end": 670,
+                                    "start": 657
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 92,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:8",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 0,
+                                "truncated": 0,
+                                "unsupported": 1
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "unsupported",
+                                    "id": "type:8",
+                                    "reasons": [
+                                        "unsupported-expression"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the fixture pins an out-of-category Rust observation"
+                    },
+                    {
+                        "category": "unsupported",
+                        "code": "cross-file-import-outside-category",
+                        "expected": true,
+                        "factIndex": 7,
+                        "occurrence": {
+                            "file": "src/matrix.ts",
+                            "span": {
+                                "start": 672,
+                                "end": 687
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "unsupported",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "end": 687,
+                                    "start": 672
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 94,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:9",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:9",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 0,
+                                "truncated": 0,
+                                "unsupported": 1
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "unsupported",
+                                    "id": "type:9",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the fixture pins an out-of-category Rust observation"
+                    },
+                    {
+                        "category": "unsupported",
+                        "code": "cross-file-import-outside-category",
+                        "expected": true,
+                        "factIndex": 8,
+                        "occurrence": {
+                            "file": "src/matrix.ts",
+                            "span": {
+                                "start": 689,
+                                "end": 701
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "unsupported",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/matrix.ts",
+                                "span": {
+                                    "end": 701,
+                                    "start": 689
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 96,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:10",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 0,
+                                "truncated": 0,
+                                "unsupported": 1
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "unsupported",
+                                    "id": "type:10",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the fixture pins an out-of-category Rust observation"
+                    }
+                ]
+            },
+            {
+                "name": "primitive-literal-independent",
+                "facts": 11,
+                "request": {
+                    "schemaVersion": 1,
+                    "project": "tsconfig.json",
+                    "requiredCapabilities": [
+                        "occurrence.type-views",
+                        "types.core-composite"
+                    ],
+                    "budgets": {
+                        "maxTypeNodes": 256,
+                        "maxTypeDepth": 16
+                    },
+                    "selections": 11
+                },
+                "repeatedRustOutputEqual": true,
+                "classifications": {
+                    "supported": 10,
+                    "unsupported": 1,
+                    "budget": 0,
+                    "mapping": 0
+                },
+                "selections": [
+                    {
+                        "factIndex": 0,
+                        "proves": "literal union and response-local member identity",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 541,
+                                    "end": 553
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:1",
+                                "literal": null,
+                                "members": [
+                                    "type:2",
+                                    "type:3",
+                                    "type:4",
+                                    "type:5",
+                                    "type:6",
+                                    "type:7"
+                                ],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "union"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 541,
+                                    "end": 553
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 84,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:7"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:7"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:7"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:7"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:1",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "ready"
+                                    }
+                                },
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "number",
+                                        "value": "42"
+                                    }
+                                },
+                                {
+                                    "id": "type:3",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "bigint",
+                                        "value": "42"
+                                    }
+                                },
+                                {
+                                    "id": "type:4",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "boolean",
+                                        "value": "true"
+                                    }
+                                },
+                                {
+                                    "id": "type:5",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "null"
+                                    }
+                                },
+                                {
+                                    "id": "type:6",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "undefined"
+                                    }
+                                },
+                                {
+                                    "id": "type:7",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "union",
+                                        "members": [
+                                            "type:1",
+                                            "type:2",
+                                            "type:3",
+                                            "type:4",
+                                            "type:5",
+                                            "type:6"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 7,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 1,
+                        "proves": "boolean primitive",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 555,
+                                    "end": 571
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:8",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "boolean"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 555,
+                                    "end": 571
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 86,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:9"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:8"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:8",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "boolean"
+                                    }
+                                },
+                                {
+                                    "id": "type:9",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 2,
+                        "proves": "string primitive",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 573,
+                                    "end": 588
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:10",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "string"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 573,
+                                    "end": 588
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 88,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:11"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:10"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:10",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "string"
+                                    }
+                                },
+                                {
+                                    "id": "type:11",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 3,
+                        "proves": "number primitive",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 590,
+                                    "end": 605
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:12",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "number"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 590,
+                                    "end": 605
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 90,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:12"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:12"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:13"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:12"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:12",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "number"
+                                    }
+                                },
+                                {
+                                    "id": "type:13",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 4,
+                        "proves": "bigint primitive",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 607,
+                                    "end": 622
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:14",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "bigint"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 607,
+                                    "end": 622
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 92,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:14"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:14"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:15"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:14"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:14",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "bigint"
+                                    }
+                                },
+                                {
+                                    "id": "type:15",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 5,
+                        "proves": "contextual string literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 379,
+                                    "end": 388
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:16",
+                                "literal": {
+                                    "kind": "string",
+                                    "value": "context"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 379,
+                                    "end": 388
+                                },
+                                "syntaxKind": "KindStringLiteral"
+                            },
+                            "oxcNodeId": 58,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:16"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:10"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:16"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:11"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:10",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "string"
+                                    }
+                                },
+                                {
+                                    "id": "type:11",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:16",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "string",
+                                        "value": "context"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 6,
+                        "proves": "contextual number literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 423,
+                                    "end": 424
+                                },
+                                "syntaxKind": "KindNumericLiteral"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:17",
+                                "literal": {
+                                    "kind": "number",
+                                    "value": "7"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 423,
+                                    "end": 424
+                                },
+                                "syntaxKind": "KindNumericLiteral"
+                            },
+                            "oxcNodeId": 64,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:17"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:12"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:17"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:13"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:12",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "number"
+                                    }
+                                },
+                                {
+                                    "id": "type:13",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:17",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "number",
+                                        "value": "7"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 7,
+                        "proves": "contextual boolean literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 461,
+                                    "end": 466
+                                },
+                                "syntaxKind": "KindFalseKeyword"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:18",
+                                "literal": {
+                                    "kind": "boolean",
+                                    "value": "false"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 461,
+                                    "end": 466
+                                },
+                                "syntaxKind": "KindFalseKeyword"
+                            },
+                            "oxcNodeId": 70,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:18"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:8"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:18"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:9"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:18",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "boolean",
+                                        "value": "false"
+                                    }
+                                },
+                                {
+                                    "id": "type:8",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "boolean"
+                                    }
+                                },
+                                {
+                                    "id": "type:9",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 8,
+                        "proves": "contextual bigint literal",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 501,
+                                    "end": 503
+                                },
+                                "syntaxKind": "KindBigIntLiteral"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "available",
+                                "widened": "same-as-actual",
+                                "apparent": "available",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:19",
+                                "literal": {
+                                    "kind": "bigint",
+                                    "value": "7"
+                                },
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "literal"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 501,
+                                    "end": 503
+                                },
+                                "syntaxKind": "KindBigIntLiteral"
+                            },
+                            "oxcNodeId": 76,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": true
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:19"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "available",
+                                    "typeId": "type:14"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:19"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "available",
+                                    "typeId": "type:15"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:14",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "primitive",
+                                        "primitive": "bigint"
+                                    }
+                                },
+                                {
+                                    "id": "type:15",
+                                    "candidateState": "truncated",
+                                    "reasons": [
+                                        "apparent-type-outside-category"
+                                    ]
+                                },
+                                {
+                                    "id": "type:19",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "literal",
+                                        "literal": "bigint",
+                                        "value": "7"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 2,
+                                "truncated": 1,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 9,
+                        "proves": "contextual null-like value",
+                        "expectedClassification": "supported",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 527,
+                                    "end": 531
+                                },
+                                "syntaxKind": "KindNullKeyword"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": false,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "inapplicable"
+                            },
+                            "actual": {
+                                "complete": true,
+                                "id": "type:6",
+                                "literal": null,
+                                "members": [],
+                                "state": "complete",
+                                "truncated": false,
+                                "typeKind": "null"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 527,
+                                    "end": 531
+                                },
+                                "syntaxKind": "KindNullKeyword"
+                            },
+                            "oxcNodeId": 81,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:5"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:5"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:5"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "inapplicable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:5",
+                                    "candidateState": "complete",
+                                    "semantic": {
+                                        "kind": "null-like",
+                                        "nullLike": "null"
+                                    }
+                                }
+                            ],
+                            "summary": {
+                                "complete": 1,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 0
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 10,
+                        "proves": "out-of-category type remains explicit",
+                        "expectedClassification": "unsupported",
+                        "expectedCode": "object-outside-category",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 624,
+                                    "end": 635
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": false,
+                                "id": "type:20",
+                                "literal": null,
+                                "members": [],
+                                "state": "truncated",
+                                "truncated": true,
+                                "typeKind": "object"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "start": 624,
+                                    "end": 635
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 94,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:20"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:20",
+                                    "candidateState": "unsupported",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 1,
+                                "error": 0
+                            }
+                        }
+                    }
+                ],
+                "goOracle": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 2,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 256,
+                            "maxTypeDepth": 16
+                        },
+                        "typeNodesUsed": 20,
+                        "maxTypeDepthObserved": 1,
+                        "truncated": false
+                    }
+                },
+                "rustProducer": {
+                    "diagnosticCount": 1,
+                    "maxTypeNodes": 256,
+                    "typeNodesUsed": 20,
+                    "truncated": false
+                },
+                "roots": {
+                    "factsWithAllFiveViews": 10,
+                    "comparedRoots": 50,
+                    "identityMatches": 50,
+                    "available": 22,
+                    "sameAsActual": 17,
+                    "inapplicable": 5,
+                    "unavailable": 6
+                },
+                "mapping": {
+                    "facts": 11,
+                    "mapped": 11,
+                    "unmapped": 0,
+                    "failedFiles": 0
+                },
+                "candidateStates": {
+                    "complete": 15,
+                    "truncated": 4,
+                    "unsupported": 1,
+                    "error": 0
+                },
+                "supportedRecords": 15,
+                "matchedSupportedRecords": 15,
+                "supportedCompatibilityPpm": 1000000,
+                "differences": [
+                    {
+                        "category": "unsupported",
+                        "code": "object-outside-category",
+                        "expected": true,
+                        "factIndex": 10,
+                        "occurrence": {
+                            "file": "src/primitives.ts",
+                            "span": {
+                                "start": 624,
+                                "end": 635
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "unsupported",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": true,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/primitives.ts",
+                                "span": {
+                                    "end": 635,
+                                    "start": 624
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "oxcNodeId": 94,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:20",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:20",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 0,
+                                "truncated": 0,
+                                "unsupported": 1
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "unsupported",
+                                    "id": "type:20",
+                                    "reasons": [
+                                        "unsupported-type-form"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the fixture pins an out-of-category Rust observation"
+                    }
+                ]
+            },
+            {
+                "name": "recovery-budgets",
+                "facts": 3,
+                "request": {
+                    "schemaVersion": 1,
+                    "project": "tsconfig.json",
+                    "requiredCapabilities": [
+                        "graph.references",
+                        "limits.type-graph",
+                        "occurrence.type-views",
+                        "types.advanced",
+                        "types.core-composite"
+                    ],
+                    "budgets": {
+                        "maxTypeNodes": 128,
+                        "maxTypeDepth": 2
+                    },
+                    "selections": 3
+                },
+                "repeatedRustOutputEqual": true,
+                "classifications": {
+                    "supported": 0,
+                    "unsupported": 0,
+                    "budget": 0,
+                    "mapping": 3
+                },
+                "selections": [
+                    {
+                        "factIndex": 0,
+                        "proves": "type-error recovery remains an explicit fact state",
+                        "expectedClassification": "mapping",
+                        "expectedCode": "oxc-parse-error",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 247,
+                                    "end": 256
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": false,
+                                "id": "type:1",
+                                "literal": null,
+                                "members": [],
+                                "state": "error",
+                                "truncated": false,
+                                "typeKind": "error"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 247,
+                                    "end": 256
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:1"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "unavailable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:1",
+                                    "candidateState": "error",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 1
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 1,
+                        "proves": "syntax-error recovery remains queryable",
+                        "expectedClassification": "mapping",
+                        "expectedCode": "oxc-parse-error",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 258,
+                                    "end": 264
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": false,
+                                "id": "type:2",
+                                "literal": null,
+                                "members": [],
+                                "state": "error",
+                                "truncated": false,
+                                "typeKind": "error"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 258,
+                                    "end": 264
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:2"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "unavailable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:2",
+                                    "candidateState": "error",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 1
+                            }
+                        }
+                    },
+                    {
+                        "factIndex": 2,
+                        "proves": "recursive advanced graph hits the configured depth budget",
+                        "expectedClassification": "mapping",
+                        "expectedCode": "oxc-parse-error",
+                        "expectationMatched": true,
+                        "goOracle": {
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 266,
+                                    "end": 270
+                                },
+                                "syntaxKind": "KindIdentifier"
+                            },
+                            "complete": false,
+                            "recovered": true,
+                            "truncated": true,
+                            "typeViewStates": {
+                                "actual": "available",
+                                "contextual": "unavailable",
+                                "widened": "same-as-actual",
+                                "apparent": "same-as-actual",
+                                "declared": "same-as-actual"
+                            },
+                            "actual": {
+                                "complete": false,
+                                "id": "type:3",
+                                "literal": null,
+                                "members": [],
+                                "state": "truncated",
+                                "truncated": true,
+                                "typeKind": "object"
+                            }
+                        },
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "start": 266,
+                                    "end": 270
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "roots": [
+                                {
+                                    "view": "actual",
+                                    "state": "available",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "contextual",
+                                    "state": "unavailable"
+                                },
+                                {
+                                    "view": "widened",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "apparent",
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3"
+                                },
+                                {
+                                    "view": "declared",
+                                    "state": "unavailable"
+                                }
+                            ],
+                            "types": [
+                                {
+                                    "id": "type:3",
+                                    "candidateState": "error",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "truncated": 0,
+                                "unsupported": 0,
+                                "error": 1
+                            }
+                        }
+                    }
+                ],
+                "goOracle": {
+                    "typescriptVersion": "7.1.0-dev",
+                    "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
+                    "diagnosticCount": 2,
+                    "budgets": {
+                        "limits": {
+                            "maxTypeNodes": 128,
+                            "maxTypeDepth": 2
+                        },
+                        "typeNodesUsed": 14,
+                        "maxTypeDepthObserved": 3,
+                        "truncated": true
+                    }
+                },
+                "rustProducer": {
+                    "diagnosticCount": 1,
+                    "maxTypeNodes": 128,
+                    "typeNodesUsed": 3,
+                    "truncated": false
+                },
+                "roots": {
+                    "factsWithAllFiveViews": 0,
+                    "comparedRoots": 0,
+                    "identityMatches": 0,
+                    "available": 0,
+                    "sameAsActual": 0,
+                    "inapplicable": 0,
+                    "unavailable": 0
+                },
+                "mapping": {
+                    "facts": 3,
+                    "mapped": 0,
+                    "unmapped": 3,
+                    "failedFiles": 1
+                },
+                "candidateStates": {
+                    "complete": 0,
+                    "truncated": 0,
+                    "unsupported": 0,
+                    "error": 3
+                },
+                "supportedRecords": 0,
+                "matchedSupportedRecords": 0,
+                "supportedCompatibilityPpm": 0,
+                "differences": [
+                    {
+                        "category": "mapping",
+                        "code": "oxc-parse-error",
+                        "expected": true,
+                        "factIndex": 0,
+                        "occurrence": {
+                            "file": "src/recovery.ts",
+                            "span": {
+                                "start": 247,
+                                "end": 256
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "mapping",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "end": 256,
+                                    "start": 247
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:1",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:1",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 1,
+                                "truncated": 0,
+                                "unsupported": 0
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "error",
+                                    "id": "type:1",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the known recovery-file OXC parser gap is explicit and stable"
+                    },
+                    {
+                        "category": "mapping",
+                        "code": "oxc-parse-error",
+                        "expected": true,
+                        "factIndex": 1,
+                        "occurrence": {
+                            "file": "src/recovery.ts",
+                            "span": {
+                                "start": 258,
+                                "end": 264
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "mapping",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "end": 264,
+                                    "start": 258
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:2",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:2",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:2",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 1,
+                                "truncated": 0,
+                                "unsupported": 0
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "error",
+                                    "id": "type:2",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the known recovery-file OXC parser gap is explicit and stable"
+                    },
+                    {
+                        "category": "mapping",
+                        "code": "oxc-parse-error",
+                        "expected": true,
+                        "factIndex": 2,
+                        "occurrence": {
+                            "file": "src/recovery.ts",
+                            "span": {
+                                "start": 266,
+                                "end": 270
+                            },
+                            "syntaxKind": "KindIdentifier"
+                        },
+                        "path": "classification",
+                        "goOracle": "mapping",
+                        "rustCandidate": {
+                            "candidateVersion": 2,
+                            "fact": {
+                                "complete": false,
+                                "recovered": false,
+                                "truncated": false
+                            },
+                            "occurrence": {
+                                "file": "src/recovery.ts",
+                                "span": {
+                                    "end": 270,
+                                    "start": 266
+                                },
+                                "syntaxKind": "KindUnknown"
+                            },
+                            "oxcNodeId": null,
+                            "roots": [
+                                {
+                                    "state": "available",
+                                    "typeId": "type:3",
+                                    "view": "actual"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "contextual"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3",
+                                    "view": "widened"
+                                },
+                                {
+                                    "state": "same-as-actual",
+                                    "typeId": "type:3",
+                                    "view": "apparent"
+                                },
+                                {
+                                    "state": "unavailable",
+                                    "view": "declared"
+                                }
+                            ],
+                            "summary": {
+                                "complete": 0,
+                                "error": 1,
+                                "truncated": 0,
+                                "unsupported": 0
+                            },
+                            "types": [
+                                {
+                                    "candidateState": "error",
+                                    "id": "type:3",
+                                    "reasons": [
+                                        "oxc-parse-or-semantic-error"
+                                    ]
+                                }
+                            ]
+                        },
+                        "explanation": "the known recovery-file OXC parser gap is explicit and stable"
+                    }
+                ]
+            }
+        ],
+        "summary": {
+            "cases": 4,
+            "facts": 28,
+            "candidateRecords": 42,
+            "supportedRecords": 29,
+            "matchedSupportedRecords": 29,
+            "supportedCompatibilityPpm": 1000000,
+            "classifications": {
+                "supported": 20,
+                "unsupported": 4,
+                "budget": 1,
+                "mapping": 3
+            },
+            "differencesByCategory": {
+                "budget": 1,
+                "mapping": 3,
+                "semantic": 0,
+                "transport": 0,
+                "unsupported": 4
+            },
+            "unexplainedDifferencesByCategory": {
+                "budget": 0,
+                "mapping": 0,
+                "semantic": 0,
+                "transport": 0,
+                "unsupported": 0
+            },
+            "expectedDifferences": 8,
+            "blockingDifferences": 0
+        },
+        "passes": true
+    },
+    "measurements": {
+        "scope": "one-shot Go process versus in-process Rust producer over identical ordered requests; characterization only",
+        "samples": [
+            {
+                "ordinal": 1,
+                "cases": 4,
+                "goOracleNanoseconds": 486867126,
+                "rustProducerNanoseconds": 1284832,
+                "rustDeterminismCheckNanoseconds": 197668,
+                "totalNanoseconds": 490094084,
+                "goSnapshotBytes": 36799,
+                "rustCandidateBytes": 22615
+            },
+            {
+                "ordinal": 2,
+                "cases": 4,
+                "goOracleNanoseconds": 124067458,
+                "rustProducerNanoseconds": 598000,
+                "rustDeterminismCheckNanoseconds": 191250,
+                "totalNanoseconds": 125660750,
+                "goSnapshotBytes": 36799,
+                "rustCandidateBytes": 22615
+            }
+        ],
+        "artifacts": {
+            "goExecutableBytes": 25670354,
+            "rustExecutableBytes": 3521008,
+            "peakOrCurrentControllerResidentBytes": 5226496,
+            "residentMeasurement": "macos-getrusage-peak",
+            "memoryScope": "Rust rollout controller including decoded Go snapshots; excludes child Go process RSS"
+        }
+    },
+    "readiness": {
+        "readyForLaterAuthorityDecision": false,
+        "status": "not-ready",
+        "blockers": [
+            "4 explicitly classified primitive/literal selections remain unsupported",
+            "3 recovery selections retain expected OXC mapping gaps",
+            "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised",
+            "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected",
+            "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
+        ]
+    },
+    "passes": true
+}

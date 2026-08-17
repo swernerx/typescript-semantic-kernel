@@ -97,6 +97,14 @@ binding, symbols, inference beyond the supported contextual literals,
 overloads, generic instantiation, narrowing, recovery, and all production
 fallback behavior remain Go-authoritative.
 
+ADR-0020 adds the controlled rollout lane. Two complete runs must share the
+checked-out corpus and repository revision, TS compiler revision, request
+schema, project, capabilities, budgets, and ordered selections. The stable
+conformance reports must be byte-identical. Host-dependent runtime, resident
+memory, artifact size, and producer-output size remain separately scoped
+characterization evidence. The lane is shadow-only and does not exercise or
+authorize production routing.
+
 ## Gate ladder
 
 1. Focused `internal/semanticfacts` and `internal/tsfacts` tests pass, including
@@ -117,6 +125,10 @@ fallback behavior remain Go-authoritative.
    byte-stable ADR-0019 report and fails on any unexplained semantic, transport,
    or mapping mismatch while retaining named unsupported, budget, and expected
    mapping cases outside the supported denominator.
+10. `./internal/oxc_reference/run-rollout.sh --output <path>` executes two
+    release-profile dual-runs, requires byte-identical embedded conformance,
+    records the controlled measurements in ADR-0020, and retains Go as serving
+    authority and production fallback.
 
 ## Upstream synchronization
 

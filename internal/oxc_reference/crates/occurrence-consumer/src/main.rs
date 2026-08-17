@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, fs, io::BufReader, sync::Arc};
 
 use oxc_allocator::Allocator;
 use oxc_occurrence_consumer::{
-    conformance::run_conformance,
+    conformance::{run_conformance, run_rollout},
     contract::{Report, correlate},
     evidence::run_evidence,
     facts::SemanticSnapshot,
@@ -71,9 +71,49 @@ fn main() -> Result<(), String> {
         {
             print_conformance(tsfacts, corpus, Some(output))
         }
+        [command, tsfacts, corpus, revision] if command == "rollout" => {
+            print_rollout(tsfacts, corpus, revision, None)
+        }
+        [command, tsfacts, corpus, revision, output_flag, output]
+            if command == "rollout" && output_flag == "--output" =>
+        {
+            print_rollout(tsfacts, corpus, revision, Some(output))
+        }
         _ => Err(
-            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>] | conformance <tsfacts-binary> <corpus-root> [--output <path>]".to_owned(),
+            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>] | conformance <tsfacts-binary> <corpus-root> [--output <path>] | rollout <tsfacts-binary> <corpus-root> <repository-revision> [--output <path>]".to_owned(),
         ),
+    }
+}
+
+fn print_rollout(
+    tsfacts: &str,
+    corpus: &str,
+    revision: &str,
+    output: Option<&String>,
+) -> Result<(), String> {
+    let report = run_rollout(
+        std::path::Path::new(tsfacts),
+        std::path::Path::new(corpus),
+        revision,
+    )?;
+    let mut bytes = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"    ");
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
+    report
+        .serialize(&mut serializer)
+        .map_err(|error| format!("serialize rollout report: {error}"))?;
+    let serialized = String::from_utf8(bytes)
+        .map_err(|error| format!("serialize rollout report as UTF-8: {error}"))?;
+    if let Some(output) = output {
+        fs::write(output, format!("{serialized}\n"))
+            .map_err(|error| format!("write rollout report {output:?}: {error}"))?;
+    } else {
+        println!("{serialized}");
+    }
+    if report.passes {
+        Ok(())
+    } else {
+        Err("rollout gate failed: conformance must pass and repeated stable reports must be byte-equal".to_owned())
     }
 }
 

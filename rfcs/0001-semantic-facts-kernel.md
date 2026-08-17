@@ -288,6 +288,18 @@ cases remain visible outside the 29-record supported denominator; unexplained
 semantic, transport, or mapping differences still block CI, and repeated full
 reports must be byte-identical.
 
+Issue #47 adds the controlled release-profile rollout lane in ADR-0020. Two
+complete runs pin the checked-out repository and TypeScript compiler revisions
+and retain each manifest-derived project, capability set, budget, and ordered
+selection count. Their stable conformance reports are byte-identical. The
+structured artifact separately records two runtime and output-size samples,
+release artifact sizes, and explicitly scoped controller resident memory. The
+29 supported records still match exactly, but four unsupported selections,
+three recovery mapping gaps, the absent serving/fallback integration, the
+non-equivalent Go-process versus in-process Rust measurement boundary, and
+missing isolated Go peak memory keep the category shadow-only and not ready for
+a later authority decision.
+
 ## Considered alternatives
 
 ### Prune TypeScript 7 immediately
@@ -358,8 +370,9 @@ Acceptance establishes the versioned boundary, not compiler equivalence,
 production readiness, or a Rust performance advantage. The TypeScript 7 Go
 checker remains the semantic oracle. The primitive/literal candidate is now
 computed independently from source and OXC semantics under ADR-0019 and passes
-its exact shadow threshold. It is not wired into production, and no semantic
-category is approved for replacement.
+its exact shadow threshold. ADR-0020 records the controlled dual-run and the
+remaining blockers. It is not wired into production, and no semantic category
+is approved for replacement.
 
 ## Open questions
 
@@ -368,9 +381,8 @@ category is approved for replacement.
 - Is source range plus syntax category sufficient for all relevant OXC nodes?
 - Which portions of the type graph require exact structure in version 1, and
   which may initially be represented as opaque or truncated?
-- What production-integration evidence and rollout boundary would be required
-  before independently computed primitive/literal output could leave shadow
-  mode while preserving Go as a fallback?
+- Which production-equivalent process or library boundary should compare both
+  implementations before fallback and rollback can be exercised?
 - Should the eventual public name be `tsfacts`, `TypeScript Semantic Kernel`, or
   another name that avoids implying an alternate TypeScript language?
 
@@ -384,3 +396,4 @@ category is approved for replacement.
 - [ADR-0017: Project primitive/literal candidates from Go graph identity](../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md)
 - [ADR-0018: Gate Rust semantics against the Go oracle](../docs/adr/0018-gate-rust-semantics-against-the-go-oracle.md)
 - [ADR-0019: Compute primitive/literal candidates independently in Rust](../docs/adr/0019-compute-primitive-literals-independently-in-rust.md)
+- [ADR-0020: Keep primitive/literal production shadow-only after the controlled dual-run](../docs/adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md)

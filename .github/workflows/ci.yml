@@ -33,14 +33,14 @@ jobs:
         run: cargo clippy --locked --manifest-path internal/oxc_reference/Cargo.toml --all-targets -- -D warnings
       - name: Test internal OXC reference consumer
         run: cargo test --locked --manifest-path internal/oxc_reference/Cargo.toml
-      - name: Gate Go versus Rust semantic conformance
-        run: ./internal/oxc_reference/run-conformance.sh --output go-rust-conformance.json
-      - name: Upload Go versus Rust conformance report
+      - name: Run controlled Go versus Rust primitive/literal rollout
+        run: ./internal/oxc_reference/run-rollout.sh --output primitive-literal-rollout.json
+      - name: Upload primitive/literal rollout report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: go-rust-semantic-conformance
-          path: go-rust-conformance.json
+          name: primitive-literal-go-rust-rollout
+          path: primitive-literal-rollout.json
 
   build:
     runs-on: ubuntu-latest
