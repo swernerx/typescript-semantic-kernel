@@ -49,5 +49,11 @@ separate measurement section because those values or their comparison boundary
 vary by host. The report is a shadow rollout artifact, not an authority switch
 or a general benchmark.
 
+Conformance schema v5 reports both the exact supported-record compatibility
+and a CI-enforced 100% accounting denominator over every selected fact. The
+four unsupported primitive/literal observations and three recovery-file
+mapping gaps remain present as stable regression limitations with explicit
+owners and reclassification actions.
+
 [ADR-0020](../adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md)
 records why the category is not ready for a later authority decision.

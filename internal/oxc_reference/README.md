@@ -72,6 +72,10 @@ contains a structured Go expectation and exactly one Rust classification:
 facts remain individually visible as expected `oxc-parse-error` mapping gaps.
 Unexplained semantic, transport, or mapping differences fail the command;
 expected unsupported, budget, and mapping cases remain separately reported.
+Schema v5 additionally requires every selected fact to participate in a
+100%-accounted selection denominator. Each unsupported selection and recovery
+mapping gap carries a stable owner and concrete action in its regression
+fixture and in the emitted report; none is silently removed from coverage.
 The wrapper executes the complete report twice and requires byte-identical
 files. The gate is a shadow comparison and does not change the producer or
 production routing. See
@@ -139,8 +143,9 @@ negotiation in Go. The intended migration sequence is:
 Occurrence identity and attachment plumbing is the first approved mechanical
 port category. Primitive/literal construction is now independently implemented
 for the narrow, tagged conformance corpus and satisfies the shadow threshold in
-ADR-0019. The controlled dual-run in ADR-0020 retains explicit unsupported,
-recovery, serving-integration, measurement-boundary, and memory blockers. This
+ADR-0019. The controlled dual-run in ADR-0020 resolves the four unsupported
+and three recovery observations as stable, owned, actionable limitations. The
+serving-integration, measurement-boundary, and memory blockers remain. This
 does not transfer semantic authority: the implementation is not wired into
 production, Go remains the fallback, and broader TypeScript semantics remain
 Go-authoritative.

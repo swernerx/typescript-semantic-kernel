@@ -105,6 +105,15 @@ memory, artifact size, and producer-output size remain separately scoped
 characterization evidence. The lane is shadow-only and does not exercise or
 authorize production routing.
 
+Issue #52 adds conformance schema v5's all-selection accounting gate. Every
+selected fact must be classified, the classification count must remain equal
+to the fact count, and the accounting ratio must remain 1,000,000 ppm. The
+four unsupported primitive/literal selections and three recovery-file mapping
+gaps are retained as stable regression limitations with machine-readable
+owners and concrete reclassification actions. They are neither dropped from
+the corpus nor counted as supported. Go remains semantic authority and the
+production fallback.
+
 ## Gate ladder
 
 1. Focused `internal/semanticfacts` and `internal/tsfacts` tests pass, including
@@ -124,7 +133,8 @@ authorize production routing.
 9. `./internal/oxc_reference/run-conformance.sh --output <path>` emits the
    byte-stable ADR-0019 report and fails on any unexplained semantic, transport,
    or mapping mismatch while retaining named unsupported, budget, and expected
-   mapping cases outside the supported denominator.
+   mapping cases. Its supported-record metric is paired with a mandatory 100%
+   all-selection accounting denominator, so no classified case is hidden.
 10. `./internal/oxc_reference/run-rollout.sh --output <path>` executes two
     release-profile dual-runs, requires byte-identical embedded conformance,
     records the controlled measurements in ADR-0020, and retains Go as serving

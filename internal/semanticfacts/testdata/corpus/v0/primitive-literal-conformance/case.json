@@ -124,6 +124,11 @@
       "conformance": {
         "classification": "unsupported",
         "code": "enum-literal-outside-category",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "rust-primitive-literal-producer",
+          "action": "Implement local enum declaration and member-value resolution before reclassifying this selection as supported."
+        },
         "goOracle": {
           "complete": false,
           "recovered": false,
@@ -141,6 +146,11 @@
       "conformance": {
         "classification": "unsupported",
         "code": "cross-file-import-outside-category",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "rust-project-resolution",
+          "action": "Implement project-aware value import resolution before reclassifying this selection as supported."
+        },
         "goOracle": {
           "complete": false,
           "recovered": false,
@@ -158,6 +168,11 @@
       "conformance": {
         "classification": "unsupported",
         "code": "cross-file-import-outside-category",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "rust-project-resolution",
+          "action": "Implement project-aware type-alias import resolution before reclassifying this selection as supported."
+        },
         "goOracle": {
           "complete": false,
           "recovered": false,

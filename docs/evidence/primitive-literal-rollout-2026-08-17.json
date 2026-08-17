@@ -1,11 +1,11 @@
 {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "evidenceKind": "primitive-literal-controlled-go-rust-dual-run",
     "command": "./internal/oxc_reference/run-rollout.sh --output <path>",
     "environment": {
         "operatingSystem": "macos",
         "architecture": "aarch64",
-        "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+        "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
         "go": "go version go1.26.6 darwin/arm64",
         "buildProfile": "release"
     },
@@ -20,15 +20,15 @@
     "determinism": {
         "completeRuns": 2,
         "conformanceReportsByteEqual": true,
-        "compactConformanceReportBytes": 52766
+        "compactConformanceReportBytes": 54311
     },
     "conformance": {
-        "schemaVersion": 4,
+        "schemaVersion": 5,
         "gateKind": "go-vs-independent-rust-semantic-conformance",
         "candidate": "independent-primitive-literal-v2",
         "shadowOnly": true,
         "execution": {
-            "repositoryRevision": "24c138ae4c7a2b9a42c1e68eb25329fbf8a3a5a9",
+            "repositoryRevision": "20d726c587bc612b5be8311530a553f70b0ed79b",
             "typescriptVersion": "7.1.0-dev",
             "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
             "requestSchemaVersion": 1,
@@ -41,6 +41,7 @@
         "threshold": {
             "minimumSupportedRecords": 15,
             "requiredSupportedCompatibilityPpm": 1000000,
+            "requiredSelectionAccountingPpm": 1000000,
             "maxUnexplainedSemanticDifferences": 0,
             "maxUnexplainedTransportDifferences": 0,
             "maxUnexplainedMappingDifferences": 0,
@@ -977,6 +978,11 @@
                         "proves": "enum-like literal values remain explicitly outside the narrow Rust category",
                         "expectedClassification": "unsupported",
                         "expectedCode": "enum-literal-outside-category",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "rust-primitive-literal-producer",
+                            "action": "Implement local enum declaration and member-value resolution before reclassifying this selection as supported."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -1074,6 +1080,11 @@
                         "proves": "imported value literals are observed without pretending cross-file Rust resolution",
                         "expectedClassification": "unsupported",
                         "expectedCode": "cross-file-import-outside-category",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "rust-project-resolution",
+                            "action": "Implement project-aware value import resolution before reclassifying this selection as supported."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -1171,6 +1182,11 @@
                         "proves": "imported literal aliases are observed without pretending cross-file Rust resolution",
                         "expectedClassification": "unsupported",
                         "expectedCode": "cross-file-import-outside-category",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "rust-project-resolution",
+                            "action": "Implement project-aware type-alias import resolution before reclassifying this selection as supported."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -3115,6 +3131,11 @@
                         "proves": "out-of-category type remains explicit",
                         "expectedClassification": "unsupported",
                         "expectedCode": "object-outside-category",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "object-category-rollout",
+                            "action": "Keep object types outside this primitive/literal producer and cover them in a separately gated object-category rollout."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -3359,6 +3380,11 @@
                         "proves": "type-error recovery remains an explicit fact state",
                         "expectedClassification": "mapping",
                         "expectedCode": "oxc-parse-error",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "oxc-occurrence-mapping",
+                            "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this type-error selection."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -3452,6 +3478,11 @@
                         "proves": "syntax-error recovery remains queryable",
                         "expectedClassification": "mapping",
                         "expectedCode": "oxc-parse-error",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "oxc-occurrence-mapping",
+                            "action": "Reclassify only when OXC recovers the malformed initializer and produces an exact NodeId mapping for this syntax-error selection."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -3545,6 +3576,11 @@
                         "proves": "recursive advanced graph hits the configured depth budget",
                         "expectedClassification": "mapping",
                         "expectedCode": "oxc-parse-error",
+                        "limitationResolution": {
+                            "stability": "stable",
+                            "owner": "oxc-occurrence-mapping",
+                            "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this recursive-budget selection."
+                        },
                         "expectationMatched": true,
                         "goOracle": {
                             "occurrence": {
@@ -3907,6 +3943,8 @@
         "summary": {
             "cases": 4,
             "facts": 28,
+            "accountedSelections": 28,
+            "selectionAccountingPpm": 1000000,
             "candidateRecords": 42,
             "supportedRecords": 29,
             "matchedSupportedRecords": 29,
@@ -3942,28 +3980,28 @@
             {
                 "ordinal": 1,
                 "cases": 4,
-                "goOracleNanoseconds": 486867126,
-                "rustProducerNanoseconds": 1284832,
-                "rustDeterminismCheckNanoseconds": 197668,
-                "totalNanoseconds": 490094084,
-                "goSnapshotBytes": 36799,
+                "goOracleNanoseconds": 700402249,
+                "rustProducerNanoseconds": 1367000,
+                "rustDeterminismCheckNanoseconds": 236041,
+                "totalNanoseconds": 704086084,
+                "goSnapshotBytes": 36671,
                 "rustCandidateBytes": 22615
             },
             {
                 "ordinal": 2,
                 "cases": 4,
-                "goOracleNanoseconds": 124067458,
-                "rustProducerNanoseconds": 598000,
-                "rustDeterminismCheckNanoseconds": 191250,
-                "totalNanoseconds": 125660750,
-                "goSnapshotBytes": 36799,
+                "goOracleNanoseconds": 127294084,
+                "rustProducerNanoseconds": 789167,
+                "rustDeterminismCheckNanoseconds": 237917,
+                "totalNanoseconds": 129383625,
+                "goSnapshotBytes": 36671,
                 "rustCandidateBytes": 22615
             }
         ],
         "artifacts": {
             "goExecutableBytes": 25670354,
-            "rustExecutableBytes": 3521008,
-            "peakOrCurrentControllerResidentBytes": 5226496,
+            "rustExecutableBytes": 3345040,
+            "peakOrCurrentControllerResidentBytes": 4964352,
             "residentMeasurement": "macos-getrusage-peak",
             "memoryScope": "Rust rollout controller including decoded Go snapshots; excludes child Go process RSS"
         }
@@ -3971,9 +4009,128 @@
     "readiness": {
         "readyForLaterAuthorityDecision": false,
         "status": "not-ready",
+        "resolvedRolloutLimitations": [
+            {
+                "case": "primitive-literal-conformance",
+                "factIndex": 6,
+                "occurrence": {
+                    "file": "src/matrix.ts",
+                    "span": {
+                        "start": 657,
+                        "end": 670
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "unsupported",
+                "code": "enum-literal-outside-category",
+                "stability": "stable",
+                "owner": "rust-primitive-literal-producer",
+                "action": "Implement local enum declaration and member-value resolution before reclassifying this selection as supported."
+            },
+            {
+                "case": "primitive-literal-conformance",
+                "factIndex": 7,
+                "occurrence": {
+                    "file": "src/matrix.ts",
+                    "span": {
+                        "start": 672,
+                        "end": 687
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "unsupported",
+                "code": "cross-file-import-outside-category",
+                "stability": "stable",
+                "owner": "rust-project-resolution",
+                "action": "Implement project-aware value import resolution before reclassifying this selection as supported."
+            },
+            {
+                "case": "primitive-literal-conformance",
+                "factIndex": 8,
+                "occurrence": {
+                    "file": "src/matrix.ts",
+                    "span": {
+                        "start": 689,
+                        "end": 701
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "unsupported",
+                "code": "cross-file-import-outside-category",
+                "stability": "stable",
+                "owner": "rust-project-resolution",
+                "action": "Implement project-aware type-alias import resolution before reclassifying this selection as supported."
+            },
+            {
+                "case": "primitive-literal-independent",
+                "factIndex": 10,
+                "occurrence": {
+                    "file": "src/primitives.ts",
+                    "span": {
+                        "start": 624,
+                        "end": 635
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "unsupported",
+                "code": "object-outside-category",
+                "stability": "stable",
+                "owner": "object-category-rollout",
+                "action": "Keep object types outside this primitive/literal producer and cover them in a separately gated object-category rollout."
+            },
+            {
+                "case": "recovery-budgets",
+                "factIndex": 0,
+                "occurrence": {
+                    "file": "src/recovery.ts",
+                    "span": {
+                        "start": 247,
+                        "end": 256
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "mapping",
+                "code": "oxc-parse-error",
+                "stability": "stable",
+                "owner": "oxc-occurrence-mapping",
+                "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this type-error selection."
+            },
+            {
+                "case": "recovery-budgets",
+                "factIndex": 1,
+                "occurrence": {
+                    "file": "src/recovery.ts",
+                    "span": {
+                        "start": 258,
+                        "end": 264
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "mapping",
+                "code": "oxc-parse-error",
+                "stability": "stable",
+                "owner": "oxc-occurrence-mapping",
+                "action": "Reclassify only when OXC recovers the malformed initializer and produces an exact NodeId mapping for this syntax-error selection."
+            },
+            {
+                "case": "recovery-budgets",
+                "factIndex": 2,
+                "occurrence": {
+                    "file": "src/recovery.ts",
+                    "span": {
+                        "start": 266,
+                        "end": 270
+                    },
+                    "syntaxKind": "KindIdentifier"
+                },
+                "classification": "mapping",
+                "code": "oxc-parse-error",
+                "stability": "stable",
+                "owner": "oxc-occurrence-mapping",
+                "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this recursive-budget selection."
+            }
+        ],
         "blockers": [
-            "4 explicitly classified primitive/literal selections remain unsupported",
-            "3 recovery selections retain expected OXC mapping gaps",
             "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised",
             "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected",
             "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
