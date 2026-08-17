@@ -22,3 +22,10 @@ Diagnostics name their failure layer: `protocol`, `exporter`, `mapping`, or
 Inspector counters retain unavailable roots, unsupported/error/truncated
 entities, and independent depth/node/edge budget cutoffs even when a measured
 count is zero.
+
+The checked record supports the migration decision in
+[ADR-0016](../adr/0016-port-occurrence-attachment-before-semantic-categories.md):
+occurrence identity and attachment plumbing may be ported behind the Go oracle.
+Primitive/literal Rust type-record construction is the next semantic candidate,
+not an approved replacement. The TypeScript 7 Go checker remains authoritative
+until independent Rust output passes the differential compatibility gates.

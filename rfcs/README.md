@@ -18,4 +18,4 @@ instead of rewriting the original decision.
 
 | RFC | Status | Title |
 | --- | --- | --- |
-| [0001](0001-semantic-facts-kernel.md) | Proposed | Expose a TypeScript semantic facts kernel |
+| [0001](0001-semantic-facts-kernel.md) | Accepted | Expose a TypeScript semantic facts kernel |
