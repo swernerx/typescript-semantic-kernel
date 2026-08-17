@@ -5,11 +5,18 @@
 > stable interface for attaching TypeScript semantic facts to source code. See
 > [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
 
-The first Phase 0 slice is the experimental [`tsfacts`](docs/tsfacts-protocol.md)
-JSON Lines command. It currently exposes annotation, inference, contextual,
-widening, narrowing, and constraint views plus response-local symbol, alias,
-and declaration provenance. Its compatibility boundary and
-current exclusions are tracked in the
+The accepted semantic-facts boundary is exposed by the experimental
+[`tsfacts`](docs/tsfacts-protocol.md) JSON Lines command. It currently provides
+annotation, inference, contextual, widening, narrowing, and constraint views
+plus response-local symbol, alias, and declaration provenance. An isolated
+Rust/OXC consumer exercises that contract as a reference and migration harness;
+TypeScript 7's Go checker remains the semantic oracle.
+
+The current [migration decision](docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md)
+and [measured evidence](docs/evidence/ts7-oxc-spike-2026-08-17.json) approve no
+Rust semantic replacement. Primitive/literal record construction is the next
+candidate for independent Rust output and differential comparison. The
+compatibility boundary and current exclusions are tracked in the
 [migration contract](docs/porting/migration-contract.md), and durable
 implementation choices are recorded in [ADRs](docs/adr/README.md).
 

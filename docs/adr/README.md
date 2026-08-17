@@ -24,3 +24,18 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0014](0014-isolate-the-oxc-reference-consumer.md) | Accepted | Isolate the OXC reference consumer |
 | [0015](0015-attach-semantic-facts-without-expanding-graph-identity.md) | Accepted | Attach semantic facts without expanding graph identity |
 | [0016](0016-port-occurrence-attachment-before-semantic-categories.md) | Accepted | Port occurrence attachment before semantic categories |
+
+## Current migration decision
+
+The completed [TS7-to-OXC/Rust spike](../evidence/ts7-oxc-spike-2026-08-17.json)
+supports mechanically porting occurrence identity and attachment plumbing
+behind differential comparison to the TypeScript 7 Go oracle. The isolated
+Rust/OXC consumer remains a reference and migration harness; the evidence does
+not establish compiler equivalence, production readiness, or a performance
+advantage.
+
+[ADR-0016](0016-port-occurrence-attachment-before-semantic-categories.md)
+identifies primitive/literal Rust type-record construction as the next semantic
+candidate. It remains Go-authoritative until independent Rust output passes the
+documented replacement gates; no semantic category is currently approved for
+replacement.

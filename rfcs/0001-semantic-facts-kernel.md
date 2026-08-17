@@ -1,6 +1,6 @@
 # RFC 0001: Expose a TypeScript semantic facts kernel
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-15
 - Upstream baseline: `microsoft/typescript-go@1bcfa18d79a3be41772223d5c05dfe4480e614ff`
 
@@ -143,7 +143,7 @@ tsfacts adapter
       v
 versioned semantic-facts protocol
       |
-      +----> OXC / Palamedes side tables (Rust)
+      +----> internal OXC reference side tables (Rust)
       +----> linters and codemods
       +----> conformance snapshots
 
@@ -197,7 +197,11 @@ should prefer that API and reduce or eliminate internal patches.
 
 ## Delivery phases
 
-### Phase 0: Protocol spike
+The protocol, corpus, and internal OXC/Rust reference path are implemented.
+The project is now evaluating migration one bounded category at a time; this
+does not make the Rust/OXC layer a production consumer or a semantic authority.
+
+### Phase 0: Protocol spike (completed)
 
 - Define source identity, fact roles, and the smallest useful type graph.
 - Add `tsfacts` for a single configured project.
@@ -205,29 +209,30 @@ should prefer that API and reduce or eliminate internal patches.
 - Query only explicitly selected occurrences before considering full-project
   eager dumps.
 
-### Phase 1: OXC bridge
+### Phase 1: Internal OXC reference bridge (completed)
 
 - Correlate TypeScript spans with OXC nodes.
 - Attach facts to OXC `NodeId` side tables.
 - Measure ambiguous and unmatched mappings.
-- Exercise the integration in one narrow consumer, initially an i18n-oriented
-  string-classification lint.
+- Exercise the integration in the repository-owned reference and migration
+  harness without introducing a downstream product dependency.
 
-### Phase 2: Conformance corpus
+### Phase 2: Conformance corpus (representative v0 slice completed)
 
-Cover at least literals and unions, `as const`, `satisfies`, imports, ambient
-declarations, overloads, generics, JSX properties, discriminated unions,
-control-flow narrowing, project references, and invalid or incomplete code.
+The v0 corpus covers core and advanced graph shapes, `as const`, `satisfies`,
+imports, overloads, generics, JSX properties, control-flow narrowing, recovery,
+and budget pressure. Ambient declarations, project references, and further
+invalid or incomplete programs remain corpus-expansion work.
 
 Snapshots should test structured facts, not only pretty-printed types.
 
-### Phase 3: Boundary evaluation
+### Phase 3: Boundary evaluation (spike completed; production shape open)
 
 Measure startup time, warm project reuse, memory use, response size, mapping
 accuracy, and upstream rebase cost. Decide whether the production interface is
 a long-lived process, library binding, or one-shot command.
 
-### Phase 4: Rust feasibility
+### Phase 4: Rust feasibility (migration harness proven; semantics not ported)
 
 Implement selected fact categories in Rust using arenas, interning, and stable
 IDs rather than mechanically translating Go pointer graphs. Compare every Rust
@@ -303,7 +308,7 @@ consumer contract.
 ### Positive
 
 - Multiple tools can share TypeScript-compatible facts.
-- Palamedes and OXC remain decoupled from TypeScript's Go object model.
+- Consumers remain decoupled from TypeScript's Go object model.
 - The protocol and corpus make a gradual Rust implementation testable.
 - The initial fork stays close enough to upstream to absorb semantic fixes.
 
@@ -319,7 +324,8 @@ consumer contract.
 
 ## Validation and acceptance criteria
 
-This RFC can move from Proposed to Accepted when a Phase 0 spike demonstrates:
+This RFC is accepted because the protocol and completed reference-consumer
+spike demonstrate:
 
 1. facts for at least ten representative semantic cases;
 2. deterministic output across repeated runs;
@@ -327,8 +333,14 @@ This RFC can move from Proposed to Accepted when a Phase 0 spike demonstrates:
 4. successful mapping of selected facts to OXC nodes with measured ambiguity;
 5. no serialized compiler-internal pointers or unstable numeric IDs;
 6. a documented upstream synchronization procedure;
-7. evidence that the interface supports at least one real Palamedes lint without
-   requiring a full AST conversion.
+7. an internal OXC/Rust reference consumer that attaches and inspects semantic
+   facts without a full AST conversion or a downstream project dependency.
+
+Acceptance establishes the versioned boundary, not compiler equivalence,
+production readiness, or a Rust performance advantage. The TypeScript 7 Go
+checker remains the semantic oracle. The next candidate is independent
+primitive/literal Rust type-record construction under ADR-0016's differential
+gates; no semantic category is approved for replacement yet.
 
 ## Open questions
 
@@ -348,3 +360,5 @@ This RFC can move from Proposed to Accepted when a Phase 0 spike demonstrates:
 - [TypeScript 7 upstream](https://github.com/microsoft/typescript-go)
 - [TypeScript 7.0 announcement](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)
 - [Oxlint type-aware architecture](https://oxc.rs/docs/guide/usage/linter/type-aware.html)
+- [TS7-to-OXC/Rust spike evidence](../docs/evidence/ts7-oxc-spike-2026-08-17.json)
+- [ADR-0016: Port occurrence attachment before semantic categories](../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md)
