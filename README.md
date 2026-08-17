@@ -12,11 +12,11 @@ plus response-local symbol, alias, and declaration provenance. An isolated
 Rust/OXC consumer exercises that contract as a reference and migration harness;
 TypeScript 7's Go checker remains the semantic oracle.
 
-The current [migration decision](docs/adr/0019-compute-primitive-literals-independently-in-rust.md)
-and [measured evidence](docs/evidence/ts7-oxc-spike-2026-08-17.json) approve no
-Rust semantic replacement. An independent Rust/OXC primitive/literal producer
-now runs under exact differential comparison while Go remains the production
-fallback and semantic authority. The
+The current [migration decision](docs/adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md)
+and [controlled rollout evidence](docs/evidence/primitive-literal-rollout-2026-08-17.json)
+approve no Rust semantic replacement. An independent Rust/OXC primitive/literal
+producer now runs under exact differential comparison while Go remains the
+production fallback and semantic authority. The
 compatibility boundary and current exclusions are tracked in the
 [migration contract](docs/porting/migration-contract.md), and durable
 implementation choices are recorded in [ADRs](docs/adr/README.md).

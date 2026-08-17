@@ -749,7 +749,7 @@ fn tool_version(command: &str, args: &[&str]) -> String {
         .unwrap_or_else(|| "unavailable".to_owned())
 }
 
-fn resident_memory() -> (Option<u64>, String) {
+pub(crate) fn resident_memory() -> (Option<u64>, String) {
     platform_resident_memory()
 }
 
@@ -792,7 +792,9 @@ fn platform_resident_memory() -> (Option<u64>, String) {
     }
 
     let mut usage = Rusage::default();
-    // macOS defines RUSAGE_SELF as zero and reports ru_maxrss in bytes.
+    // SAFETY: `usage` is a valid, aligned, writable `Rusage` for the duration of
+    // the call. macOS defines `RUSAGE_SELF` as zero and initializes the struct
+    // before returning success; no pointer is retained by `getrusage`.
     let result = unsafe { getrusage(0, &raw mut usage) };
     let bytes = (result == 0)
         .then(|| u64::try_from(usage.max_resident_bytes).ok())

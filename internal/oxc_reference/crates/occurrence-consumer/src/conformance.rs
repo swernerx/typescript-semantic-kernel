@@ -4,6 +4,7 @@ use std::{
     io::{BufReader, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    time::Instant,
 };
 
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,7 @@ use crate::{
         PrimitiveLiteralCandidate,
     },
     contract::{Occurrence, Span},
+    evidence::resident_memory,
     facts::{
         EntityState, LiteralValue, OccurrenceTypeFacts, ProducerBudgetReport, SemanticSnapshot,
         TypeGraph, TypeId, TypeKind, TypeViewState, TypeViewStates,
@@ -25,7 +27,8 @@ use crate::{
     },
 };
 
-pub const CONFORMANCE_SCHEMA_VERSION: u32 = 3;
+pub const CONFORMANCE_SCHEMA_VERSION: u32 = 4;
+pub const ROLLOUT_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,11 +37,109 @@ pub struct ConformanceReport {
     pub gate_kind: &'static str,
     pub candidate: &'static str,
     pub shadow_only: bool,
+    pub execution: ExecutionContract,
     pub threshold: CompatibilityThreshold,
     pub corpus: CorpusCoverage,
     pub cases: Vec<ConformanceCase>,
     pub summary: ConformanceSummary,
     pub passes: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionContract {
+    pub repository_revision: String,
+    pub typescript_version: String,
+    pub typescript_revision: String,
+    pub request_schema_version: u32,
+    pub corpus_path: &'static str,
+    pub go_semantic_authority: bool,
+    pub rust_mode: &'static str,
+    pub ts7_producer_protocol_changed: bool,
+    pub external_consumer_behavior_changed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RolloutReport {
+    pub schema_version: u32,
+    pub evidence_kind: &'static str,
+    pub command: &'static str,
+    pub environment: RolloutEnvironment,
+    pub authority: AuthorityBoundary,
+    pub determinism: DeterminismEvidence,
+    pub conformance: ConformanceReport,
+    pub measurements: RolloutMeasurements,
+    pub readiness: AuthorityReadiness,
+    pub passes: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RolloutEnvironment {
+    pub operating_system: &'static str,
+    pub architecture: &'static str,
+    pub rustc: String,
+    pub go: String,
+    pub build_profile: &'static str,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorityBoundary {
+    pub serving_authority: &'static str,
+    pub production_fallback: &'static str,
+    pub rust_mode: &'static str,
+    pub authority_switch: bool,
+    pub ts7_producer_protocol_changed: bool,
+    pub external_consumer_behavior_changed: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeterminismEvidence {
+    pub complete_runs: usize,
+    pub conformance_reports_byte_equal: bool,
+    pub compact_conformance_report_bytes: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RolloutMeasurements {
+    pub scope: &'static str,
+    pub samples: Vec<MeasurementSample>,
+    pub artifacts: RolloutArtifacts,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasurementSample {
+    pub ordinal: usize,
+    pub cases: usize,
+    pub go_oracle_nanoseconds: u64,
+    pub rust_producer_nanoseconds: u64,
+    pub rust_determinism_check_nanoseconds: u64,
+    pub total_nanoseconds: u64,
+    pub go_snapshot_bytes: usize,
+    pub rust_candidate_bytes: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RolloutArtifacts {
+    pub go_executable_bytes: u64,
+    pub rust_executable_bytes: u64,
+    pub peak_or_current_controller_resident_bytes: Option<u64>,
+    pub resident_measurement: String,
+    pub memory_scope: &'static str,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorityReadiness {
+    pub ready_for_later_authority_decision: bool,
+    pub status: &'static str,
+    pub blockers: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
@@ -66,6 +167,7 @@ pub struct CompatibilityThreshold {
 pub struct ConformanceCase {
     pub name: String,
     pub facts: usize,
+    pub request: PinnedRequestEvidence,
     pub repeated_rust_output_equal: bool,
     pub classifications: ClassificationCoverage,
     pub selections: Vec<SelectionEvidence>,
@@ -78,6 +180,16 @@ pub struct ConformanceCase {
     pub matched_supported_records: usize,
     pub supported_compatibility_ppm: u64,
     pub differences: Vec<ConformanceDifference>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PinnedRequestEvidence {
+    pub schema_version: u32,
+    pub project: String,
+    pub required_capabilities: Vec<String>,
+    pub budgets: ProducerBudgetRequest,
+    pub selections: usize,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
@@ -131,9 +243,11 @@ pub struct GoOracleFactObservation {
     pub actual: serde_json::Value,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GoOracleEvidence {
+    pub typescript_version: String,
+    pub typescript_revision: String,
     pub diagnostic_count: u32,
     pub budgets: ProducerBudgetReport,
 }
@@ -263,11 +377,11 @@ struct CorpusManifest {
     selections: Vec<CorpusSelection>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ProducerBudgetRequest {
-    max_type_nodes: u32,
-    max_type_depth: u32,
+pub struct ProducerBudgetRequest {
+    pub max_type_nodes: u32,
+    pub max_type_depth: u32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -340,10 +454,95 @@ struct ProducerSelection {
     end: usize,
 }
 
+struct CompletedConformanceRun {
+    report: ConformanceReport,
+    measurement: MeasurementSample,
+}
+
 pub fn run_conformance(
     tsfacts_binary: &Path,
     corpus_root: &Path,
 ) -> Result<ConformanceReport, String> {
+    run_conformance_at_revision(tsfacts_binary, corpus_root, "unrecorded")
+}
+
+pub fn run_conformance_at_revision(
+    tsfacts_binary: &Path,
+    corpus_root: &Path,
+    repository_revision: &str,
+) -> Result<ConformanceReport, String> {
+    Ok(run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?.report)
+}
+
+pub fn run_rollout(
+    tsfacts_binary: &Path,
+    corpus_root: &Path,
+    repository_revision: &str,
+) -> Result<RolloutReport, String> {
+    let mut first = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
+    let mut repeated = run_conformance_observed(tsfacts_binary, corpus_root, repository_revision)?;
+    first.measurement.ordinal = 1;
+    repeated.measurement.ordinal = 2;
+    let first_bytes = serde_json::to_vec(&first.report)
+        .map_err(|error| format!("transport: serialize first conformance report: {error}"))?;
+    let repeated_bytes = serde_json::to_vec(&repeated.report)
+        .map_err(|error| format!("transport: serialize repeated conformance report: {error}"))?;
+    let reports_equal = first_bytes == repeated_bytes;
+    let conformance_passes = first.report.passes && repeated.report.passes;
+    let readiness = authority_readiness(&first.report.summary);
+    let (resident_bytes, resident_measurement) = resident_memory();
+    let rust_executable_bytes = std::env::current_exe()
+        .ok()
+        .and_then(|path| fs::metadata(path).ok())
+        .map_or(0, |metadata| metadata.len());
+    let go_executable_bytes = fs::metadata(tsfacts_binary).map_or(0, |metadata| metadata.len());
+
+    Ok(RolloutReport {
+        schema_version: ROLLOUT_SCHEMA_VERSION,
+        evidence_kind: "primitive-literal-controlled-go-rust-dual-run",
+        command: "./internal/oxc_reference/run-rollout.sh --output <path>",
+        environment: RolloutEnvironment {
+            operating_system: std::env::consts::OS,
+            architecture: std::env::consts::ARCH,
+            rustc: tool_version("rustc", &["--version"]),
+            go: tool_version("go", &["version"]),
+            build_profile: "release",
+        },
+        authority: AuthorityBoundary {
+            serving_authority: "go",
+            production_fallback: "go",
+            rust_mode: "shadow-only",
+            authority_switch: false,
+            ts7_producer_protocol_changed: false,
+            external_consumer_behavior_changed: false,
+        },
+        determinism: DeterminismEvidence {
+            complete_runs: 2,
+            conformance_reports_byte_equal: reports_equal,
+            compact_conformance_report_bytes: first_bytes.len(),
+        },
+        conformance: first.report,
+        measurements: RolloutMeasurements {
+            scope: "one-shot Go process versus in-process Rust producer over identical ordered requests; characterization only",
+            samples: vec![first.measurement, repeated.measurement],
+            artifacts: RolloutArtifacts {
+                go_executable_bytes,
+                rust_executable_bytes,
+                peak_or_current_controller_resident_bytes: resident_bytes,
+                resident_measurement,
+                memory_scope: "Rust rollout controller including decoded Go snapshots; excludes child Go process RSS",
+            },
+        },
+        readiness,
+        passes: conformance_passes && reports_equal,
+    })
+}
+
+fn run_conformance_observed(
+    tsfacts_binary: &Path,
+    corpus_root: &Path,
+    repository_revision: &str,
+) -> Result<CompletedConformanceRun, String> {
     let tsfacts_binary = tsfacts_binary
         .canonicalize()
         .map_err(|error| format!("transport: resolve {}: {error}", tsfacts_binary.display()))?;
@@ -355,6 +554,8 @@ pub fn run_conformance(
         discovered_cases: case_directories.len(),
         ..CorpusCoverage::default()
     };
+    let run_started = Instant::now();
+    let mut measurement = MeasurementSample::default();
     let mut cases = Vec::new();
     for case_directory in case_directories {
         let manifest = read_manifest(&case_directory)?;
@@ -376,7 +577,20 @@ pub fn run_conformance(
         }
         validate_expectations(&manifest)?;
         let request = build_request(&case_directory, &manifest)?;
-        let snapshot = run_go_oracle(&tsfacts_binary, &case_directory, &request)?;
+        let request_evidence = PinnedRequestEvidence {
+            schema_version: request.schema_version,
+            project: request.project.to_owned(),
+            required_capabilities: request.required_capabilities.to_vec(),
+            budgets: request.budgets,
+            selections: request.selections.len(),
+        };
+        let go_started = Instant::now();
+        let (snapshot, snapshot_bytes) = run_go_oracle(&tsfacts_binary, &case_directory, &request)?;
+        measurement.go_oracle_nanoseconds = measurement
+            .go_oracle_nanoseconds
+            .saturating_add(duration_nanoseconds(go_started.elapsed().as_nanos()));
+        measurement.go_snapshot_bytes =
+            measurement.go_snapshot_bytes.saturating_add(snapshot_bytes);
         let selections = request
             .selections
             .iter()
@@ -395,8 +609,21 @@ pub fn run_conformance(
         let limits = PrimitiveProducerLimits {
             max_type_nodes: usize::try_from(manifest.budgets.max_type_nodes).unwrap_or(usize::MAX),
         };
+        let rust_started = Instant::now();
         let first = produce_primitive_literals(&case_directory, &selections, limits)?;
+        measurement.rust_producer_nanoseconds = measurement
+            .rust_producer_nanoseconds
+            .saturating_add(duration_nanoseconds(rust_started.elapsed().as_nanos()));
+        measurement.rust_candidate_bytes = measurement.rust_candidate_bytes.saturating_add(
+            serde_json::to_vec(&first)
+                .map_err(|error| format!("transport: serialize Rust candidate output: {error}"))?
+                .len(),
+        );
+        let repeated_started = Instant::now();
         let repeated = produce_primitive_literals(&case_directory, &selections, limits)?;
+        measurement.rust_determinism_check_nanoseconds = measurement
+            .rust_determinism_check_nanoseconds
+            .saturating_add(duration_nanoseconds(repeated_started.elapsed().as_nanos()));
         let repeated_equal = serde_json::to_vec(&first).ok() == serde_json::to_vec(&repeated).ok();
         let expectations = manifest
             .selections
@@ -420,6 +647,7 @@ pub fn run_conformance(
             &snapshot,
             first,
             repeated_equal,
+            request_evidence,
             &expectations,
             &proves,
         ));
@@ -428,16 +656,34 @@ pub fn run_conformance(
     let summary = summarize(&cases);
     let threshold = compatibility_threshold();
     let passes = threshold_passes(&summary, threshold);
-    Ok(ConformanceReport {
+    let (typescript_version, typescript_revision) = compiler_identity(&cases)?;
+    measurement.cases = cases.len();
+    measurement.total_nanoseconds = duration_nanoseconds(run_started.elapsed().as_nanos());
+    let report = ConformanceReport {
         schema_version: CONFORMANCE_SCHEMA_VERSION,
         gate_kind: "go-vs-independent-rust-semantic-conformance",
         candidate: "independent-primitive-literal-v2",
         shadow_only: true,
+        execution: ExecutionContract {
+            repository_revision: repository_revision.to_owned(),
+            typescript_version,
+            typescript_revision,
+            request_schema_version: 1,
+            corpus_path: "internal/semanticfacts/testdata/corpus/v0",
+            go_semantic_authority: true,
+            rust_mode: "shadow-only",
+            ts7_producer_protocol_changed: false,
+            external_consumer_behavior_changed: false,
+        },
         threshold,
         corpus,
         cases,
         summary,
         passes,
+    };
+    Ok(CompletedConformanceRun {
+        report,
+        measurement,
     })
 }
 
@@ -468,11 +714,62 @@ fn difference_count(summary: &ConformanceSummary, category: &str) -> usize {
         .unwrap_or_default()
 }
 
+fn compiler_identity(cases: &[ConformanceCase]) -> Result<(String, String), String> {
+    let Some(first) = cases.first() else {
+        return Err("transport: conformance corpus selected no cases".to_owned());
+    };
+    let version = first.go_oracle.typescript_version.clone();
+    let revision = first.go_oracle.typescript_revision.clone();
+    if cases.iter().any(|case| {
+        case.go_oracle.typescript_version != version
+            || case.go_oracle.typescript_revision != revision
+    }) {
+        return Err(
+            "transport: selected cases did not run against one pinned TypeScript compiler revision"
+                .to_owned(),
+        );
+    }
+    Ok((version, revision))
+}
+
+fn authority_readiness(summary: &ConformanceSummary) -> AuthorityReadiness {
+    let mut blockers = Vec::new();
+    if summary.classifications.unsupported > 0 {
+        blockers.push(format!(
+            "{} explicitly classified primitive/literal selections remain unsupported",
+            summary.classifications.unsupported
+        ));
+    }
+    if summary.classifications.mapping > 0 {
+        blockers.push(format!(
+            "{} recovery selections retain expected OXC mapping gaps",
+            summary.classifications.mapping
+        ));
+    }
+    blockers.push(
+        "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised"
+            .to_owned(),
+    );
+    blockers.push(
+        "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected"
+            .to_owned(),
+    );
+    blockers.push(
+        "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
+            .to_owned(),
+    );
+    AuthorityReadiness {
+        ready_for_later_authority_decision: false,
+        status: "not-ready",
+        blockers,
+    }
+}
+
 fn run_go_oracle(
     tsfacts_binary: &Path,
     case_directory: &Path,
     request: &ProducerRequest<'_>,
-) -> Result<SemanticSnapshot, String> {
+) -> Result<(SemanticSnapshot, usize), String> {
     let request_json = serde_json::to_vec(request)
         .map_err(|error| format!("transport: encode Go oracle request: {error}"))?;
     let mut child = Command::new(tsfacts_binary)
@@ -498,8 +795,10 @@ fn run_go_oracle(
             String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
-    SemanticSnapshot::from_json_lines(BufReader::new(output.stdout.as_slice()))
-        .map_err(|error| format!("transport: decode Go oracle output: {error}"))
+    let snapshot_bytes = output.stdout.len();
+    let snapshot = SemanticSnapshot::from_json_lines(BufReader::new(output.stdout.as_slice()))
+        .map_err(|error| format!("transport: decode Go oracle output: {error}"))?;
+    Ok((snapshot, snapshot_bytes))
 }
 
 fn compare_case(
@@ -507,6 +806,7 @@ fn compare_case(
     snapshot: &SemanticSnapshot,
     output: IndependentPrimitiveLiteralOutput,
     repeated_equal: bool,
+    request: PinnedRequestEvidence,
     expectations: &[SelectionExpectation],
     proves: &[String],
 ) -> ConformanceCase {
@@ -524,7 +824,7 @@ fn compare_case(
     }
 
     comparison.compare_scoped_facts(expectations, proves);
-    comparison.finish(name, repeated_equal)
+    comparison.finish(name, repeated_equal, request)
 }
 
 struct Comparison<'a> {
@@ -1079,15 +1379,23 @@ impl<'a> Comparison<'a> {
         matched
     }
 
-    fn finish(mut self, name: String, repeated_equal: bool) -> ConformanceCase {
+    fn finish(
+        mut self,
+        name: String,
+        repeated_equal: bool,
+        request: PinnedRequestEvidence,
+    ) -> ConformanceCase {
         sort_differences(&mut self.differences);
         ConformanceCase {
             name,
             facts: self.snapshot.facts().len(),
+            request,
             repeated_rust_output_equal: repeated_equal,
             classifications: self.classifications,
             selections: self.selections,
             go_oracle: GoOracleEvidence {
+                typescript_version: self.snapshot.typescript_version.clone(),
+                typescript_revision: self.snapshot.typescript_revision.clone(),
                 diagnostic_count: self.snapshot.diagnostic_count,
                 budgets: self.snapshot.budgets,
             },
@@ -1367,6 +1675,20 @@ fn ratio_ppm(numerator: usize, denominator: usize) -> u64 {
     }
 }
 
+fn duration_nanoseconds(value: u128) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+fn tool_version(command: &str, args: &[&str]) -> String {
+    Command::new(command)
+        .args(args)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+        .unwrap_or_else(|| "unavailable".to_owned())
+}
+
 fn sorted_case_directories(corpus_root: &Path) -> Result<Vec<PathBuf>, String> {
     let mut directories = fs::read_dir(corpus_root)
         .map_err(|error| format!("transport: read {}: {error}", corpus_root.display()))?
@@ -1527,5 +1849,38 @@ mod tests {
         assert!(bijection.bind(&go_one, &rust_one));
         assert!(!bijection.bind(&go_one, &rust_two));
         assert!(!bijection.bind(&go_two, &rust_one));
+    }
+
+    #[test]
+    fn exact_shadow_conformance_does_not_imply_authority_readiness() {
+        let summary = ConformanceSummary {
+            supported_records: 29,
+            matched_supported_records: 29,
+            supported_compatibility_ppm: 1_000_000,
+            classifications: ClassificationCoverage {
+                supported: 20,
+                unsupported: 4,
+                budget: 1,
+                mapping: 3,
+            },
+            ..ConformanceSummary::default()
+        };
+
+        assert!(threshold_passes(&summary, compatibility_threshold()));
+        let readiness = authority_readiness(&summary);
+        assert!(!readiness.ready_for_later_authority_decision);
+        assert_eq!(readiness.status, "not-ready");
+        assert!(
+            readiness
+                .blockers
+                .iter()
+                .any(|blocker| blocker.starts_with("4 explicitly classified"))
+        );
+        assert!(
+            readiness
+                .blockers
+                .iter()
+                .any(|blocker| blocker.starts_with("3 recovery selections"))
+        );
     }
 }

@@ -27,6 +27,7 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md) | Superseded | Project primitive/literal candidates from Go graph identity |
 | [0018](0018-gate-rust-semantics-against-the-go-oracle.md) | Superseded | Gate Rust semantics against the Go oracle |
 | [0019](0019-compute-primitive-literals-independently-in-rust.md) | Accepted | Compute primitive/literal candidates independently in Rust |
+| [0020](0020-keep-primitive-literals-shadow-only-after-dual-run.md) | Accepted | Keep primitive/literal production shadow-only after the controlled dual-run |
 
 ## Current migration decision
 
@@ -40,6 +41,9 @@ advantage.
 [ADR-0019](0019-compute-primitive-literals-independently-in-rust.md) runs an
 independent Rust/OXC primitive/literal producer over the tagged shared corpus
 and enforces exact structured agreement in shadow CI. It owns its type graph
-and receives no Go semantic graph input. Passing the gate still leaves
-primitive/literal construction Go-authoritative in production; no semantic
-category is currently approved for replacement.
+and receives no Go semantic graph input.
+[ADR-0020](0020-keep-primitive-literals-shadow-only-after-dual-run.md) records
+the controlled rollout evidence and the remaining unsupported, recovery,
+production-integration, measurement-boundary, and memory blockers.
+Primitive/literal construction remains Go-authoritative in production; no
+semantic category is currently approved for replacement.

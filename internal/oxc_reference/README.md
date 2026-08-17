@@ -77,6 +77,24 @@ files. The gate is a shadow comparison and does not change the producer or
 production routing. See
 [ADR-0019](../../docs/adr/0019-compute-primitive-literals-independently-in-rust.md).
 
+Run the controlled rollout evidence path with release binaries:
+
+```sh
+./internal/oxc_reference/run-rollout.sh \
+  --output docs/evidence/primitive-literal-rollout-2026-08-17.json
+```
+
+This command executes two complete Go/Rust dual-runs over the same ordered
+manifest requests and requires their embedded conformance reports to be
+byte-identical. The report pins the repository and TypeScript revisions,
+projects, capabilities, budgets, and selection counts. It also records two
+host-dependent runtime/output-size samples, release artifact sizes, and the
+Rust controller's explicitly scoped resident-memory measurement. Those
+measurements characterize the one-shot Go versus in-process Rust harness; they
+are not compatibility thresholds or a performance claim. Go remains the
+serving authority and fallback, and Rust stays shadow-only. See
+[ADR-0020](../../docs/adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md).
+
 The first test suite applies the Rust implementation of the portable contract
 to every shared JSON fixture in `internal/occurrencemap/testdata/v1` and checks
 its complete expected report. It separately parses those fixture sources with
@@ -121,9 +139,11 @@ negotiation in Go. The intended migration sequence is:
 Occurrence identity and attachment plumbing is the first approved mechanical
 port category. Primitive/literal construction is now independently implemented
 for the narrow, tagged conformance corpus and satisfies the shadow threshold in
-ADR-0019. This does not transfer semantic authority: the implementation is not
-wired into production, Go remains the fallback, and broader TypeScript
-semantics remain Go-authoritative.
+ADR-0019. The controlled dual-run in ADR-0020 retains explicit unsupported,
+recovery, serving-integration, measurement-boundary, and memory blockers. This
+does not transfer semantic authority: the implementation is not wired into
+production, Go remains the fallback, and broader TypeScript semantics remain
+Go-authoritative.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.
