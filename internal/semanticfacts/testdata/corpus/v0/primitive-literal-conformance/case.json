@@ -1,0 +1,248 @@
+{
+  "name": "primitive-literal-conformance",
+  "description": "Expanded primitive/literal declarations, expressions, modifiers, imports, and null-like values",
+  "coverage": [
+    "primitive-literal-as-const",
+    "primitive-literal-declarations",
+    "primitive-literal-enum-like",
+    "primitive-literal-expressions",
+    "primitive-literal-imports",
+    "primitive-literal-satisfies",
+    "primitive-literal-widening"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "budgets": {
+    "maxTypeNodes": 512,
+    "maxTypeDepth": 16
+  },
+  "selections": [
+    {
+      "file": "src/matrix.ts",
+      "text": "literalDeclaration",
+      "occurrence": 1,
+      "proves": "literal declaration retains its annotated literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "declared" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "\"expression\"",
+      "occurrence": 0,
+      "proves": "standalone literal expression remains a literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "expression" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "widenedDeclaration",
+      "occurrence": 1,
+      "proves": "mutable declaration widens a string literal to string",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "string", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "constAssertion",
+      "occurrence": 1,
+      "proves": "as const prevents literal widening",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "const-asserted" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "\"satisfied\"",
+      "occurrence": 0,
+      "proves": "satisfies preserves the literal while supplying string context",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "satisfied" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "\"context\"",
+      "occurrence": 0,
+      "proves": "annotated initializer retains literal and contextual primitive views",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "context" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "enumLikeValue",
+      "occurrence": 1,
+      "proves": "enum-like literal values remain explicitly outside the narrow Rust category",
+      "conformance": {
+        "classification": "unsupported",
+        "code": "enum-literal-outside-category",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "available" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "enum", "value": "ready" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "importedLiteral",
+      "occurrence": 1,
+      "proves": "imported value literals are observed without pretending cross-file Rust resolution",
+      "conformance": {
+        "classification": "unsupported",
+        "code": "cross-file-import-outside-category",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "imported" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "importedType",
+      "occurrence": 1,
+      "proves": "imported literal aliases are observed without pretending cross-file Rust resolution",
+      "conformance": {
+        "classification": "unsupported",
+        "code": "cross-file-import-outside-category",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "imported-type" } }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "literalUnion",
+      "occurrence": 1,
+      "proves": "literal union retains every primitive, literal, and null-like member",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": true,
+          "recovered": false,
+          "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": {
+            "typeKind": "union",
+            "state": "complete",
+            "complete": true,
+            "truncated": false,
+            "members": [
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "ready" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "number", "value": "42" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "bigint", "value": "42" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "boolean", "value": "true" } },
+              { "typeKind": "null", "state": "complete", "complete": true, "truncated": false },
+              { "typeKind": "undefined", "state": "complete", "complete": true, "truncated": false }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "null",
+      "occurrence": 1,
+      "proves": "null expression remains null-like",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": true,
+          "recovered": false,
+          "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "inapplicable" },
+          "actual": { "typeKind": "null", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "undefined",
+      "occurrence": 1,
+      "proves": "undefined expression remains null-like",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": true,
+          "recovered": false,
+          "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "undefined", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
+    },
+    {
+      "file": "src/matrix.ts",
+      "text": "voidValue",
+      "occurrence": 1,
+      "proves": "void declaration remains null-like",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": true,
+          "recovered": false,
+          "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "void", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
+    }
+  ]
+}

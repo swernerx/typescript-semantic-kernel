@@ -24,19 +24,52 @@
       "file": "src/recovery.ts",
       "text": "recovered",
       "occurrence": 1,
-      "proves": "type-error recovery remains an explicit fact state"
+      "proves": "type-error recovery remains an explicit fact state",
+      "conformance": {
+        "classification": "mapping",
+        "code": "oxc-parse-error",
+        "goOracle": {
+          "complete": false,
+          "recovered": true,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "error", "state": "error", "complete": false, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/recovery.ts",
       "text": "syntax",
       "occurrence": 1,
-      "proves": "syntax-error recovery remains queryable"
+      "proves": "syntax-error recovery remains queryable",
+      "conformance": {
+        "classification": "mapping",
+        "code": "oxc-parse-error",
+        "goOracle": {
+          "complete": false,
+          "recovered": true,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "error", "state": "error", "complete": false, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/recovery.ts",
       "text": "deep",
       "occurrence": 1,
-      "proves": "recursive advanced graph hits the configured depth budget"
+      "proves": "recursive advanced graph hits the configured depth budget",
+      "conformance": {
+        "classification": "mapping",
+        "code": "oxc-parse-error",
+        "goOracle": {
+          "complete": false,
+          "recovered": true,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "object", "state": "truncated", "complete": false, "truncated": true }
+        }
+      }
     }
   ],
   "expectations": {
