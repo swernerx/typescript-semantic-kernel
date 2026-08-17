@@ -26,8 +26,21 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@fcf085fcb4b4b8f63f96906cd713eb52181b5ea4 # stable
+      - uses: ./.github/actions/setup-go
+      - name: Check internal OXC reference formatting
+        run: cargo fmt --manifest-path internal/oxc_reference/Cargo.toml --all -- --check
+      - name: Lint internal OXC reference consumer
+        run: cargo clippy --locked --manifest-path internal/oxc_reference/Cargo.toml --all-targets -- -D warnings
       - name: Test internal OXC reference consumer
         run: cargo test --locked --manifest-path internal/oxc_reference/Cargo.toml
+      - name: Gate Go versus Rust semantic conformance
+        run: ./internal/oxc_reference/run-conformance.sh --output go-rust-conformance.json
+      - name: Upload Go versus Rust conformance report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0 # v7.0.1
+        with:
+          name: go-rust-semantic-conformance
+          path: go-rust-conformance.json
 
   build:
     runs-on: ubuntu-latest

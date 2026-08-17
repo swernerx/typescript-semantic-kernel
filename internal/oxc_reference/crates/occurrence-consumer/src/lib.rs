@@ -1,4 +1,5 @@
 pub mod candidate;
+pub mod conformance;
 pub mod contract;
 pub mod evidence;
 pub mod facts;

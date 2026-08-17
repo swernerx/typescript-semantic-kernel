@@ -270,6 +270,16 @@ but decoding and projecting Go-produced roots is not semantic equivalence or an
 independent producer. ADR-0016 defines the compatibility gates and lists the
 semantic areas that remain Go-authoritative.
 
+Issue #41 implements the next shadow gate under ADR-0018. The real Go producer
+and the Rust primitive/literal candidate run over the same six-case corpus;
+the deterministic JSON comparison covers fact identity, all five type-view
+roots, response-local graph identity, structured payloads, diagnostics,
+unsupported/error states, and truncation. CI requires 1,000,000 ppm agreement
+for complete in-category records and zero unexplained semantic or transport
+differences. Mapping gaps and expected unsupported/budget cases remain
+separately classified. This gate does not change the schema-v1 producer or
+approve a semantic replacement.
+
 ## Considered alternatives
 
 ### Prune TypeScript 7 immediately
@@ -339,9 +349,10 @@ spike demonstrate:
 Acceptance establishes the versioned boundary, not compiler equivalence,
 production readiness, or a Rust performance advantage. The TypeScript 7 Go
 checker remains the semantic oracle. The first primitive/literal Rust candidate
-is now a structured projection of the Go graph under ADR-0017; an independent
-producer and ADR-0016's differential gates are still required before any
-semantic category can be approved for replacement.
+is now a structured projection of the Go graph under ADR-0017 and passes the
+ADR-0018 shadow threshold. An independent producer and the complete ADR-0018
+replacement checklist are still required before any semantic category can be
+approved for replacement.
 
 ## Open questions
 
@@ -350,9 +361,9 @@ semantic category can be approved for replacement.
 - Is source range plus syntax category sufficient for all relevant OXC nodes?
 - Which portions of the type graph require exact structure in version 1, and
   which may initially be represented as opaque or truncated?
-- What compatibility threshold should a future Rust category meet before it can
-  replace the Go result? ADR-0016 defines the first gate; it must be revisited
-  with independent Rust semantic output before replacement.
+- Which category-specific evidence will first satisfy ADR-0018's exact
+  compatibility threshold and replacement checklist using independent Rust
+  semantic output?
 - Should the eventual public name be `tsfacts`, `TypeScript Semantic Kernel`, or
   another name that avoids implying an alternate TypeScript language?
 
@@ -364,3 +375,4 @@ semantic category can be approved for replacement.
 - [TS7-to-OXC/Rust spike evidence](../docs/evidence/ts7-oxc-spike-2026-08-17.json)
 - [ADR-0016: Port occurrence attachment before semantic categories](../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md)
 - [ADR-0017: Project primitive/literal candidates from Go graph identity](../docs/adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md)
+- [ADR-0018: Gate Rust semantics against the Go oracle](../docs/adr/0018-gate-rust-semantics-against-the-go-oracle.md)
