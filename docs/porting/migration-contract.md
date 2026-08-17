@@ -10,7 +10,7 @@
   evidence justifies pruning.
 - **Authority:** This repository may implement, test, and merge the adapter and
   its conformance corpus. Replacing checker categories with another backend
-  requires the compatibility threshold in ADR-0016 and fresh differential
+  requires the replacement checklist in ADR-0020 and fresh differential
   evidence from an independent semantic producer.
 
 ## Equivalence boundary
@@ -117,8 +117,8 @@ authorize production routing.
 4. The complete repository test suite passes without reduced test counts.
 5. Format and lint checks pass.
 6. CI passes on the upstream-supported matrix.
-7. Phase 0 meets every acceptance criterion in RFC 0001 before that RFC becomes
-   Accepted.
+7. RFC 0001 remains Accepted, with its current evidence and limitations kept in
+   sync with the ADR index and checked-in rollout artifacts.
 8. `./internal/oxc_reference/run-evidence.sh --output <path>` produces stable
    repeated observations and passes ADR-0016's occurrence/attachment gate.
 9. `./internal/oxc_reference/run-conformance.sh --output <path>` emits the
