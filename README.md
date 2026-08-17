@@ -3,7 +3,8 @@
 > [`microsoft/typescript-go`](https://github.com/microsoft/typescript-go), not
 > an official Microsoft or TypeScript project. The experiment explores a small,
 > stable interface for attaching TypeScript semantic facts to source code. See
-> [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the proposed direction.
+> [RFC 0001](rfcs/0001-semantic-facts-kernel.md) for the accepted direction and
+> its current migration boundary.
 
 The accepted semantic-facts boundary is exposed by the experimental
 [`tsfacts`](docs/tsfacts-protocol.md) JSON Lines command. It currently provides
@@ -20,6 +21,16 @@ production fallback and semantic authority. The
 compatibility boundary and current exclusions are tracked in the
 [migration contract](docs/porting/migration-contract.md), and durable
 implementation choices are recorded in [ADRs](docs/adr/README.md).
+
+## Current migration status
+
+The occurrence-to-OXC attachment path and the independent Rust primitive/literal
+producer are implemented and exercised by deterministic Go-versus-Rust shadow
+gates. The controlled rollout evidence records exact agreement for the current
+supported corpus, but Rust is not a production semantic authority: the Go
+checker remains the serving implementation and fallback. See [ADR-0020](docs/adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md)
+for the remaining blockers and the [rollout evidence](docs/evidence/primitive-literal-rollout-2026-08-17.json)
+for the measured boundary.
 
 # TypeScript 7
 
