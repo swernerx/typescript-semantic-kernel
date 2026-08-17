@@ -281,6 +281,13 @@ pub struct GraphIssue {
     pub limit: Option<u32>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LiteralValue {
+    pub kind: String,
+    pub value: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionalTypeDetails {
@@ -354,6 +361,8 @@ pub struct TypeRecord {
     pub construct_signatures: Vec<SignatureId>,
     #[serde(default)]
     pub index_signatures: Vec<SignatureId>,
+    #[serde(default)]
+    pub literal: Option<LiteralValue>,
     #[serde(default)]
     pub conditional: Option<ConditionalTypeDetails>,
     #[serde(default)]

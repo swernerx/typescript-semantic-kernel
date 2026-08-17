@@ -24,6 +24,7 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0014](0014-isolate-the-oxc-reference-consumer.md) | Accepted | Isolate the OXC reference consumer |
 | [0015](0015-attach-semantic-facts-without-expanding-graph-identity.md) | Accepted | Attach semantic facts without expanding graph identity |
 | [0016](0016-port-occurrence-attachment-before-semantic-categories.md) | Accepted | Port occurrence attachment before semantic categories |
+| [0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md) | Accepted | Project primitive/literal candidates from Go graph identity |
 
 ## Current migration decision
 
@@ -34,8 +35,9 @@ Rust/OXC consumer remains a reference and migration harness; the evidence does
 not establish compiler equivalence, production readiness, or a performance
 advantage.
 
-[ADR-0016](0016-port-occurrence-attachment-before-semantic-categories.md)
-identifies primitive/literal Rust type-record construction as the next semantic
-candidate. It remains Go-authoritative until independent Rust output passes the
-documented replacement gates; no semantic category is currently approved for
-replacement.
+[ADR-0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md)
+records the first Rust-owned primitive/literal candidate over the Go-produced
+graph. It makes structured comparison possible but is not an independent
+producer. Primitive/literal construction remains Go-authoritative until a
+future Rust producer passes ADR-0016's replacement gates; no semantic category
+is currently approved for replacement.
