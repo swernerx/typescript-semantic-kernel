@@ -25,6 +25,7 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0015](0015-attach-semantic-facts-without-expanding-graph-identity.md) | Accepted | Attach semantic facts without expanding graph identity |
 | [0016](0016-port-occurrence-attachment-before-semantic-categories.md) | Accepted | Port occurrence attachment before semantic categories |
 | [0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md) | Accepted | Project primitive/literal candidates from Go graph identity |
+| [0018](0018-gate-rust-semantics-against-the-go-oracle.md) | Accepted | Gate Rust semantics against the Go oracle |
 
 ## Current migration decision
 
@@ -35,9 +36,9 @@ Rust/OXC consumer remains a reference and migration harness; the evidence does
 not establish compiler equivalence, production readiness, or a performance
 advantage.
 
-[ADR-0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md)
-records the first Rust-owned primitive/literal candidate over the Go-produced
-graph. It makes structured comparison possible but is not an independent
-producer. Primitive/literal construction remains Go-authoritative until a
-future Rust producer passes ADR-0016's replacement gates; no semantic category
-is currently approved for replacement.
+[ADR-0018](0018-gate-rust-semantics-against-the-go-oracle.md) runs that first
+Rust-owned primitive/literal candidate over the complete Go corpus and enforces
+exact supported structured agreement in shadow CI. The candidate is still a
+projection of the Go-produced graph, not an independent producer. Passing the
+shadow gate therefore leaves primitive/literal construction Go-authoritative;
+no semantic category is currently approved for replacement.

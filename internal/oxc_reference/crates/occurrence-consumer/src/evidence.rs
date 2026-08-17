@@ -750,55 +750,59 @@ fn tool_version(command: &str, args: &[&str]) -> String {
 }
 
 fn resident_memory() -> (Option<u64>, String) {
-    #[cfg(target_os = "linux")]
-    {
-        let bytes = fs::read_to_string("/proc/self/status")
-            .ok()
-            .and_then(|status| {
-                status.lines().find_map(|line| {
-                    line.strip_prefix("VmHWM:")
-                        .and_then(|value| value.split_whitespace().next())
-                        .and_then(|value| value.parse::<u64>().ok())
-                })
+    platform_resident_memory()
+}
+
+#[cfg(target_os = "linux")]
+fn platform_resident_memory() -> (Option<u64>, String) {
+    let bytes = fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status.lines().find_map(|line| {
+                line.strip_prefix("VmHWM:")
+                    .and_then(|value| value.split_whitespace().next())
+                    .and_then(|value| value.parse::<u64>().ok())
             })
-            .map(|kilobytes| kilobytes.saturating_mul(1024));
-        return (bytes, "linux-proc-vmhwm-peak".to_owned());
-    }
-    #[cfg(target_os = "macos")]
-    {
-        #[repr(C)]
-        #[derive(Clone, Copy, Default)]
-        struct Timeval {
-            seconds: i64,
-            microseconds: i32,
-            padding: i32,
-        }
+        })
+        .map(|kilobytes| kilobytes.saturating_mul(1024));
+    (bytes, "linux-proc-vmhwm-peak".to_owned())
+}
 
-        #[repr(C)]
-        #[derive(Clone, Copy, Default)]
-        struct Rusage {
-            user_time: Timeval,
-            system_time: Timeval,
-            max_resident_bytes: i64,
-            remaining_fields: [i64; 13],
-        }
-
-        unsafe extern "C" {
-            fn getrusage(who: i32, usage: *mut Rusage) -> i32;
-        }
-
-        let mut usage = Rusage::default();
-        // macOS defines RUSAGE_SELF as zero and reports ru_maxrss in bytes.
-        let result = unsafe { getrusage(0, &raw mut usage) };
-        let bytes = (result == 0)
-            .then(|| u64::try_from(usage.max_resident_bytes).ok())
-            .flatten();
-        (bytes, "macos-getrusage-peak".to_owned())
+#[cfg(target_os = "macos")]
+fn platform_resident_memory() -> (Option<u64>, String) {
+    #[repr(C)]
+    #[derive(Clone, Copy, Default)]
+    struct Timeval {
+        seconds: i64,
+        microseconds: i32,
+        padding: i32,
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    {
-        (None, "unavailable".to_owned())
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Default)]
+    struct Rusage {
+        user_time: Timeval,
+        system_time: Timeval,
+        max_resident_bytes: i64,
+        remaining_fields: [i64; 13],
     }
+
+    unsafe extern "C" {
+        fn getrusage(who: i32, usage: *mut Rusage) -> i32;
+    }
+
+    let mut usage = Rusage::default();
+    // macOS defines RUSAGE_SELF as zero and reports ru_maxrss in bytes.
+    let result = unsafe { getrusage(0, &raw mut usage) };
+    let bytes = (result == 0)
+        .then(|| u64::try_from(usage.max_resident_bytes).ok())
+        .flatten();
+    (bytes, "macos-getrusage-peak".to_owned())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn platform_resident_memory() -> (Option<u64>, String) {
+    (None, "unavailable".to_owned())
 }
 
 #[cfg(test)]

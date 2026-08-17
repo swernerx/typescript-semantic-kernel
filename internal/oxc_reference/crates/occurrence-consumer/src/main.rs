@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, fs, io::BufReader, sync::Arc};
 
 use oxc_allocator::Allocator;
 use oxc_occurrence_consumer::{
+    conformance::run_conformance,
     contract::{Report, correlate},
     evidence::run_evidence,
     facts::SemanticSnapshot,
@@ -62,9 +63,43 @@ fn main() -> Result<(), String> {
         {
             print_evidence(tsfacts, corpus, Some(output))
         }
+        [command, tsfacts, corpus] if command == "conformance" => {
+            print_conformance(tsfacts, corpus, None)
+        }
+        [command, tsfacts, corpus, output_flag, output]
+            if command == "conformance" && output_flag == "--output" =>
+        {
+            print_conformance(tsfacts, corpus, Some(output))
+        }
         _ => Err(
-            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>]".to_owned(),
+            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>] | conformance <tsfacts-binary> <corpus-root> [--output <path>]".to_owned(),
         ),
+    }
+}
+
+fn print_conformance(tsfacts: &str, corpus: &str, output: Option<&String>) -> Result<(), String> {
+    let report = run_conformance(std::path::Path::new(tsfacts), std::path::Path::new(corpus))?;
+    let mut bytes = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"    ");
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
+    report
+        .serialize(&mut serializer)
+        .map_err(|error| format!("serialize conformance report: {error}"))?;
+    let serialized = String::from_utf8(bytes)
+        .map_err(|error| format!("serialize conformance report as UTF-8: {error}"))?;
+    if let Some(output) = output {
+        fs::write(output, format!("{serialized}\n"))
+            .map_err(|error| format!("write conformance report {output:?}: {error}"))?;
+    } else {
+        println!("{serialized}");
+    }
+    if report.passes {
+        Ok(())
+    } else {
+        Err(format!(
+            "conformance gate failed with {} blocking difference(s)",
+            report.summary.blocking_differences
+        ))
     }
 }
 

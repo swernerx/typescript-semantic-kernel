@@ -1,0 +1,20 @@
+{
+  "description": "Focused mutations proving deterministic conformance-difference classification",
+  "cases": [
+    {
+      "mutation": "fact-identity",
+      "expectedCategory": "transport",
+      "expectedCode": "fact-identity-mismatch"
+    },
+    {
+      "mutation": "root-identity",
+      "expectedCategory": "transport",
+      "expectedCode": "root-identity-mismatch"
+    },
+    {
+      "mutation": "semantic-payload",
+      "expectedCategory": "semantic",
+      "expectedCode": "primitive-literal-semantic-mismatch"
+    }
+  ]
+}

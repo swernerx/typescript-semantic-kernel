@@ -53,6 +53,23 @@ intentional syntax-recovery source as a consumer failure. It does not infer
 semantic equivalence from those mappings. See
 [ADR-0016](../../docs/adr/0016-port-occurrence-attachment-before-semantic-categories.md).
 
+Run the deterministic Go-versus-Rust shadow conformance gate with:
+
+```sh
+./internal/oxc_reference/run-conformance.sh \
+  --output /tmp/ts7-rust-conformance.json
+```
+
+The command runs the same corpus through the Go oracle and the version-1 Rust
+primitive/literal candidate. Its JSON compares fact identity, all five roots,
+response-local graph identity, structured payloads, diagnostics, unsupported
+and error states, and truncation. Every entry is classified as `semantic`,
+`transport`, `mapping`, `unsupported`, or `budget`. Unexplained semantic or
+transport differences fail the command; expected unsupported/budget cases and
+the known recovery-file mapping gap remain separately reported. The gate is a
+shadow comparison and does not change the producer or production routing. See
+[ADR-0018](../../docs/adr/0018-gate-rust-semantics-against-the-go-oracle.md).
+
 The first test suite applies the Rust implementation of the portable contract
 to every shared JSON fixture in `internal/occurrencemap/testdata/v1` and checks
 its complete expected report. It separately parses those fixture sources with
@@ -101,8 +118,8 @@ Occurrence identity and attachment plumbing is the first approved mechanical
 port category. The primitive/literal projection is the first implemented
 semantic candidate record, but it consumes Go-produced graph facts and does
 not constitute an independent producer. All semantic answers remain
-Go-authoritative until an independent Rust producer passes ADR-0016's
-differential gate.
+Go-authoritative until an independent Rust producer completes ADR-0018's
+replacement checklist.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.
