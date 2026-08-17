@@ -26,8 +26,9 @@ count is zero.
 The checked record supports the migration decision in
 [ADR-0016](../adr/0016-port-occurrence-attachment-before-semantic-categories.md):
 occurrence identity and attachment plumbing may be ported behind the Go oracle.
-[ADR-0017](../adr/0017-project-primitive-literal-candidates-from-go-graph-identity.md)
-subsequently adds a structured primitive/literal Rust candidate over that
-Go-produced graph. It is not an approved replacement or an independent
-producer. The TypeScript 7 Go checker remains authoritative until independent
-Rust output passes the differential compatibility gates.
+[ADR-0019](../adr/0019-compute-primitive-literals-independently-in-rust.md)
+subsequently adds a structured primitive/literal producer that derives its
+answer from source and OXC semantics without receiving the Go graph. It passes
+an exact shadow differential gate but is not an approved production
+replacement. The TypeScript 7 Go checker remains authoritative and available
+as the production fallback.

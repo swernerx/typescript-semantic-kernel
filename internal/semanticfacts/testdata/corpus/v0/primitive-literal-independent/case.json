@@ -1,0 +1,94 @@
+{
+  "name": "primitive-literal-independent",
+  "description": "Independent Rust/OXC primitive and literal construction",
+  "coverage": [
+    "contextual-literals",
+    "literal-unions",
+    "null-like",
+    "primitive-literals-independent",
+    "primitive-literals-recovery",
+    "primitive-types",
+    "unsupported"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "budgets": {
+    "maxTypeNodes": 256,
+    "maxTypeDepth": 16
+  },
+  "selections": [
+    {
+      "file": "src/primitives.ts",
+      "text": "literalUnion",
+      "occurrence": 1,
+      "proves": "literal union and response-local member identity"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "booleanPrimitive",
+      "occurrence": 1,
+      "proves": "boolean primitive"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "stringPrimitive",
+      "occurrence": 1,
+      "proves": "string primitive"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "numberPrimitive",
+      "occurrence": 1,
+      "proves": "number primitive"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "bigintPrimitive",
+      "occurrence": 1,
+      "proves": "bigint primitive"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "\"context\"",
+      "occurrence": 0,
+      "proves": "contextual string literal"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "7",
+      "occurrence": 0,
+      "proves": "contextual number literal"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "false",
+      "occurrence": 0,
+      "proves": "contextual boolean literal"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "7n",
+      "occurrence": 0,
+      "proves": "contextual bigint literal"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "null",
+      "occurrence": 1,
+      "proves": "contextual null-like value"
+    },
+    {
+      "file": "src/primitives.ts",
+      "text": "unsupported",
+      "occurrence": 1,
+      "proves": "out-of-category type remains explicit"
+    }
+  ],
+  "expectations": {
+    "recovery": true,
+    "truncation": true
+  }
+}

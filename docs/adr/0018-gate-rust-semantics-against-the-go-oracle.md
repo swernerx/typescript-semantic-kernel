@@ -1,10 +1,10 @@
 # ADR-0018: Gate Rust semantics against the Go oracle
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-08-17
 - Deciders: TypeScript Semantic Kernel maintainers
 - Supersedes: —
-- Superseded by: —
+- Superseded by: ADR-0019
 
 ## Context
 

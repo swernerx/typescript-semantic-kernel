@@ -24,8 +24,9 @@ decision is recorded in a successor ADR that links to the record it replaces.
 | [0014](0014-isolate-the-oxc-reference-consumer.md) | Accepted | Isolate the OXC reference consumer |
 | [0015](0015-attach-semantic-facts-without-expanding-graph-identity.md) | Accepted | Attach semantic facts without expanding graph identity |
 | [0016](0016-port-occurrence-attachment-before-semantic-categories.md) | Accepted | Port occurrence attachment before semantic categories |
-| [0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md) | Accepted | Project primitive/literal candidates from Go graph identity |
-| [0018](0018-gate-rust-semantics-against-the-go-oracle.md) | Accepted | Gate Rust semantics against the Go oracle |
+| [0017](0017-project-primitive-literal-candidates-from-go-graph-identity.md) | Superseded | Project primitive/literal candidates from Go graph identity |
+| [0018](0018-gate-rust-semantics-against-the-go-oracle.md) | Superseded | Gate Rust semantics against the Go oracle |
+| [0019](0019-compute-primitive-literals-independently-in-rust.md) | Accepted | Compute primitive/literal candidates independently in Rust |
 
 ## Current migration decision
 
@@ -36,9 +37,9 @@ Rust/OXC consumer remains a reference and migration harness; the evidence does
 not establish compiler equivalence, production readiness, or a performance
 advantage.
 
-[ADR-0018](0018-gate-rust-semantics-against-the-go-oracle.md) runs that first
-Rust-owned primitive/literal candidate over the complete Go corpus and enforces
-exact supported structured agreement in shadow CI. The candidate is still a
-projection of the Go-produced graph, not an independent producer. Passing the
-shadow gate therefore leaves primitive/literal construction Go-authoritative;
-no semantic category is currently approved for replacement.
+[ADR-0019](0019-compute-primitive-literals-independently-in-rust.md) runs an
+independent Rust/OXC primitive/literal producer over the tagged shared corpus
+and enforces exact structured agreement in shadow CI. It owns its type graph
+and receives no Go semantic graph input. Passing the gate still leaves
+primitive/literal construction Go-authoritative in production; no semantic
+category is currently approved for replacement.
