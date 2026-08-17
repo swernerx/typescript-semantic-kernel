@@ -50,10 +50,14 @@ byte-identical.
 
 The executable shadow threshold is at least 15 complete supported records,
 1,000,000 parts-per-million structured agreement, and zero semantic,
-transport, or mapping differences. The tagged baseline contains 11 facts: 10
-supported facts plus one named unsupported object, 50 compared roots with 50
-identity matches, and 11 exact OXC mappings. Expected apparent-type truncation
-and unsupported states remain visible outside the supported denominator.
+transport, or unexplained mapping differences. The expanded tagged baseline
+contains 28 classified facts: 20 supported, four named unsupported, one budget,
+and three expected recovery-file mapping facts. It compares 29 supported graph
+records and 100 roots with exact identity agreement. Twenty-five facts map to
+typed OXC nodes; the three unmapped facts retain the stable `oxc-parse-error`
+classification. Expected unsupported, budget, and mapping states remain visible
+outside the supported denominator, and the full report must be byte-identical
+across repeated runs.
 
 This producer remains an internal shadow implementation. The Go checker stays
 the semantic authority and production fallback. No TS7 producer protocol,
@@ -65,8 +69,9 @@ part of this decision.
 - Primitive/literal conformance now measures independently computed Rust/OXC
   semantics instead of a Go-graph projection.
 - The narrow category has deterministic source-to-record and graph-identity
-  evidence, including contextual literals, literal unions, unsupported forms,
-  and budget truncation.
+  evidence, including declarations and expressions, widening, `as const`,
+  `satisfies`, contextual literals, literal unions, null-like values, imports,
+  enum-like values, unsupported forms, and budget truncation.
 - Graph inspection continues to describe Go responses; it no longer embeds a
   misleading projected Rust candidate.
 - Passing this shadow gate does not itself authorize a production authority

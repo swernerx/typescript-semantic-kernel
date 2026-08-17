@@ -16,8 +16,8 @@ use crate::{
     },
     contract::{Occurrence, Span},
     facts::{
-        EntityState, OccurrenceTypeFacts, ProducerBudgetReport, SemanticSnapshot, TypeGraph,
-        TypeId, TypeKind, TypeViewState,
+        EntityState, LiteralValue, OccurrenceTypeFacts, ProducerBudgetReport, SemanticSnapshot,
+        TypeGraph, TypeId, TypeKind, TypeViewState, TypeViewStates,
     },
     primitive_producer::{
         IndependentPrimitiveLiteralOutput, PrimitiveLiteralSelection, PrimitiveProducerLimits,
@@ -25,7 +25,7 @@ use crate::{
     },
 };
 
-pub const CONFORMANCE_SCHEMA_VERSION: u32 = 2;
+pub const CONFORMANCE_SCHEMA_VERSION: u32 = 3;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,9 +35,19 @@ pub struct ConformanceReport {
     pub candidate: &'static str,
     pub shadow_only: bool,
     pub threshold: CompatibilityThreshold,
+    pub corpus: CorpusCoverage,
     pub cases: Vec<ConformanceCase>,
     pub summary: ConformanceSummary,
     pub passes: bool,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CorpusCoverage {
+    pub discovered_cases: usize,
+    pub selected_cases: usize,
+    pub selected_facts: usize,
+    pub excluded_cases: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -55,9 +65,10 @@ pub struct CompatibilityThreshold {
 #[serde(rename_all = "camelCase")]
 pub struct ConformanceCase {
     pub name: String,
-    pub independent_scope: bool,
     pub facts: usize,
     pub repeated_rust_output_equal: bool,
+    pub classifications: ClassificationCoverage,
+    pub selections: Vec<SelectionEvidence>,
     pub go_oracle: GoOracleEvidence,
     pub rust_producer: RustProducerEvidence,
     pub roots: RootCoverage,
@@ -67,6 +78,57 @@ pub struct ConformanceCase {
     pub matched_supported_records: usize,
     pub supported_compatibility_ppm: u64,
     pub differences: Vec<ConformanceDifference>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassificationCoverage {
+    pub supported: usize,
+    pub unsupported: usize,
+    pub budget: usize,
+    pub mapping: usize,
+}
+
+impl ClassificationCoverage {
+    fn add(&mut self, classification: ExpectedClassification) {
+        match classification {
+            ExpectedClassification::Supported => self.supported += 1,
+            ExpectedClassification::Unsupported => self.unsupported += 1,
+            ExpectedClassification::Budget => self.budget += 1,
+            ExpectedClassification::Mapping => self.mapping += 1,
+        }
+    }
+
+    fn merge(&mut self, other: Self) {
+        self.supported += other.supported;
+        self.unsupported += other.unsupported;
+        self.budget += other.budget;
+        self.mapping += other.mapping;
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectionEvidence {
+    pub fact_index: usize,
+    pub proves: String,
+    pub expected_classification: ExpectedClassification,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_code: Option<String>,
+    pub expectation_matched: bool,
+    pub go_oracle: GoOracleFactObservation,
+    pub rust_candidate: PrimitiveLiteralCandidate,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoOracleFactObservation {
+    pub occurrence: Occurrence,
+    pub complete: bool,
+    pub recovered: bool,
+    pub truncated: bool,
+    pub type_view_states: TypeViewStates,
+    pub actual: serde_json::Value,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
@@ -115,7 +177,9 @@ pub struct ConformanceSummary {
     pub supported_records: usize,
     pub matched_supported_records: usize,
     pub supported_compatibility_ppm: u64,
+    pub classifications: ClassificationCoverage,
     pub differences_by_category: BTreeMap<String, usize>,
+    pub unexplained_differences_by_category: BTreeMap<String, usize>,
     pub expected_differences: usize,
     pub blocking_differences: usize,
 }
@@ -129,7 +193,17 @@ impl Default for ConformanceSummary {
             supported_records: 0,
             matched_supported_records: 0,
             supported_compatibility_ppm: 0,
+            classifications: ClassificationCoverage::default(),
             differences_by_category: [
+                ("semantic".to_owned(), 0),
+                ("transport".to_owned(), 0),
+                ("mapping".to_owned(), 0),
+                ("unsupported".to_owned(), 0),
+                ("budget".to_owned(), 0),
+            ]
+            .into_iter()
+            .collect(),
+            unexplained_differences_by_category: [
                 ("semantic".to_owned(), 0),
                 ("transport".to_owned(), 0),
                 ("mapping".to_owned(), 0),
@@ -152,6 +226,12 @@ pub enum DifferenceCategory {
     Mapping,
     Unsupported,
     Budget,
+}
+
+struct NonSupportedObservation<'a> {
+    category: DifferenceCategory,
+    state_matches: bool,
+    explanation: &'a str,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -179,8 +259,6 @@ struct CorpusManifest {
     project: String,
     capabilities: Vec<String>,
     #[serde(default)]
-    coverage: Vec<String>,
-    #[serde(default)]
     budgets: ProducerBudgetRequest,
     selections: Vec<CorpusSelection>,
 }
@@ -197,6 +275,52 @@ struct CorpusSelection {
     file: String,
     text: String,
     occurrence: usize,
+    proves: String,
+    #[serde(default)]
+    conformance: Option<SelectionExpectation>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SelectionExpectation {
+    classification: ExpectedClassification,
+    #[serde(default)]
+    code: Option<String>,
+    go_oracle: GoOracleExpectation,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ExpectedClassification {
+    Supported,
+    Unsupported,
+    Budget,
+    Mapping,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GoOracleExpectation {
+    complete: bool,
+    recovered: bool,
+    truncated: bool,
+    type_view_states: TypeViewStates,
+    actual: GoOracleTypeExpectation,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GoOracleTypeExpectation {
+    type_kind: TypeKind,
+    state: EntityState,
+    complete: bool,
+    truncated: bool,
+    #[serde(default)]
+    literal: Option<LiteralValue>,
+    #[serde(default)]
+    members: Option<Vec<GoOracleTypeExpectation>>,
+    #[serde(default)]
+    member_count: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -226,9 +350,31 @@ pub fn run_conformance(
     let corpus_root = corpus_root
         .canonicalize()
         .map_err(|error| format!("transport: resolve {}: {error}", corpus_root.display()))?;
+    let case_directories = sorted_case_directories(&corpus_root)?;
+    let mut corpus = CorpusCoverage {
+        discovered_cases: case_directories.len(),
+        ..CorpusCoverage::default()
+    };
     let mut cases = Vec::new();
-    for case_directory in sorted_case_directories(&corpus_root)? {
+    for case_directory in case_directories {
         let manifest = read_manifest(&case_directory)?;
+        let expectation_count = manifest
+            .selections
+            .iter()
+            .filter(|selection| selection.conformance.is_some())
+            .count();
+        if expectation_count == 0 {
+            corpus.excluded_cases.push(manifest.name);
+            continue;
+        }
+        if expectation_count != manifest.selections.len() {
+            return Err(format!(
+                "transport: case {:?} has {expectation_count}/{} conformance expectations; selected cases must classify every fixture",
+                manifest.name,
+                manifest.selections.len()
+            ));
+        }
+        validate_expectations(&manifest)?;
         let request = build_request(&case_directory, &manifest)?;
         let snapshot = run_go_oracle(&tsfacts_binary, &case_directory, &request)?;
         let selections = request
@@ -252,16 +398,30 @@ pub fn run_conformance(
         let first = produce_primitive_literals(&case_directory, &selections, limits)?;
         let repeated = produce_primitive_literals(&case_directory, &selections, limits)?;
         let repeated_equal = serde_json::to_vec(&first).ok() == serde_json::to_vec(&repeated).ok();
-        let independent_scope = manifest
-            .coverage
+        let expectations = manifest
+            .selections
             .iter()
-            .any(|item| item == "primitive-literals-independent");
+            .map(|selection| {
+                selection
+                    .conformance
+                    .clone()
+                    .expect("selected cases require every expectation")
+            })
+            .collect::<Vec<_>>();
+        let proves = manifest
+            .selections
+            .iter()
+            .map(|selection| selection.proves.clone())
+            .collect::<Vec<_>>();
+        corpus.selected_cases += 1;
+        corpus.selected_facts += expectations.len();
         cases.push(compare_case(
             manifest.name,
-            independent_scope,
             &snapshot,
             first,
             repeated_equal,
+            &expectations,
+            &proves,
         ));
     }
 
@@ -274,6 +434,7 @@ pub fn run_conformance(
         candidate: "independent-primitive-literal-v2",
         shadow_only: true,
         threshold,
+        corpus,
         cases,
         summary,
         passes,
@@ -301,7 +462,7 @@ fn threshold_passes(summary: &ConformanceSummary, threshold: CompatibilityThresh
 
 fn difference_count(summary: &ConformanceSummary, category: &str) -> usize {
     summary
-        .differences_by_category
+        .unexplained_differences_by_category
         .get(category)
         .copied()
         .unwrap_or_default()
@@ -343,10 +504,11 @@ fn run_go_oracle(
 
 fn compare_case(
     name: String,
-    independent_scope: bool,
     snapshot: &SemanticSnapshot,
     output: IndependentPrimitiveLiteralOutput,
     repeated_equal: bool,
+    expectations: &[SelectionExpectation],
+    proves: &[String],
 ) -> ConformanceCase {
     let mut comparison = Comparison::new(snapshot, &output);
     if !repeated_equal {
@@ -361,31 +523,8 @@ fn compare_case(
         ));
     }
 
-    if independent_scope {
-        comparison.compare_scoped_facts();
-    } else {
-        comparison.differences.push(expected_difference(
-            DifferenceCategory::Unsupported,
-            "case-outside-independent-slice",
-            None,
-            "case.coverage",
-            None,
-            None,
-            "this pre-existing corpus case remains outside the selected primitive/literal slice",
-        ));
-    }
-    if output.truncated {
-        comparison.differences.push(expected_difference(
-            DifferenceCategory::Budget,
-            "rust-type-budget-truncated",
-            None,
-            "rustProducer.truncated",
-            json_value(&snapshot.budgets.truncated),
-            json_value(&true),
-            "the independent Rust response-local type budget was exhausted",
-        ));
-    }
-    comparison.finish(name, independent_scope, repeated_equal)
+    comparison.compare_scoped_facts(expectations, proves);
+    comparison.finish(name, repeated_equal)
 }
 
 struct Comparison<'a> {
@@ -395,6 +534,8 @@ struct Comparison<'a> {
     roots: RootCoverage,
     mapping: MappingCoverage,
     candidate_states: CandidateSummary,
+    classifications: ClassificationCoverage,
+    selections: Vec<SelectionEvidence>,
     bijection: TypeBijection,
     compared_pairs: BTreeSet<(TypeId, TypeId)>,
     supported_records: usize,
@@ -441,6 +582,8 @@ impl<'a> Comparison<'a> {
                 ..MappingCoverage::default()
             },
             candidate_states,
+            classifications: ClassificationCoverage::default(),
+            selections: Vec::new(),
             bijection: TypeBijection::default(),
             compared_pairs: BTreeSet::new(),
             supported_records: 0,
@@ -449,56 +592,254 @@ impl<'a> Comparison<'a> {
         }
     }
 
-    fn compare_scoped_facts(&mut self) {
-        let mut candidates = self
-            .output
-            .candidates
-            .iter()
-            .map(|candidate| (candidate.occurrence.clone(), candidate))
-            .collect::<BTreeMap<_, _>>();
-        for (fact_index, facts) in self.snapshot.facts().iter().enumerate() {
-            let occurrence = facts.occurrence();
-            let Some(candidate) = candidates.remove(&occurrence) else {
-                self.mapping.unmapped += 1;
-                self.differences.push(mismatch(
-                    DifferenceCategory::Mapping,
-                    "missing-rust-candidate",
-                    Some((fact_index, occurrence)),
-                    "mapping",
-                    json_value(&"one candidate"),
-                    json_value(&"none"),
-                    "every selected Go fact must map to one independent OXC candidate",
-                ));
-                continue;
-            };
-            if candidate.oxc_node_id.is_some() {
-                self.mapping.mapped += 1;
-            } else {
-                self.mapping.unmapped += 1;
-                self.differences.push(mismatch(
-                    DifferenceCategory::Mapping,
-                    "missing-oxc-node",
-                    Some((fact_index, occurrence.clone())),
-                    "oxcNodeId",
-                    json_value(&"typed OXC NodeId"),
-                    None,
-                    "independent facts must originate from an exact OXC semantic node",
-                ));
-            }
-            self.compare_fact(fact_index, facts, candidate);
-        }
-        for (occurrence, _) in candidates {
-            self.mapping.unmapped += 1;
+    fn compare_scoped_facts(&mut self, expectations: &[SelectionExpectation], proves: &[String]) {
+        self.mapping.facts = expectations.len();
+        if self.snapshot.facts().len() != expectations.len()
+            || self.output.candidates.len() != expectations.len()
+            || proves.len() != expectations.len()
+        {
             self.differences.push(mismatch(
-                DifferenceCategory::Mapping,
-                "extra-rust-candidate",
+                DifferenceCategory::Transport,
+                "selection-count-mismatch",
                 None,
-                "mapping",
-                json_value(&"no extra candidate"),
-                json_value(&occurrence),
-                "the Rust producer must not invent facts outside the pinned request",
+                "selections",
+                json_value(&expectations.len()),
+                json_value(&(
+                    self.snapshot.facts().len(),
+                    self.output.candidates.len(),
+                    proves.len(),
+                )),
+                "the manifest, Go oracle, and Rust producer must retain one observation per selection",
             ));
         }
+
+        let mut failed_files = BTreeSet::new();
+        let count = expectations
+            .len()
+            .min(self.snapshot.facts().len())
+            .min(self.output.candidates.len())
+            .min(proves.len());
+        for fact_index in 0..count {
+            let facts = &self.snapshot.facts()[fact_index];
+            let candidate = &self.output.candidates[fact_index];
+            let expectation = &expectations[fact_index];
+            let occurrence = facts.occurrence();
+            let difference_start = self.differences.len();
+            self.classifications.add(expectation.classification);
+            self.validate_go_expectation(fact_index, facts, &expectation.go_oracle);
+
+            if candidate.occurrence.file != occurrence.file
+                || candidate.occurrence.span != occurrence.span
+            {
+                self.differences.push(mismatch(
+                    DifferenceCategory::Transport,
+                    "fact-identity-mismatch",
+                    Some((fact_index, occurrence.clone())),
+                    "occurrence",
+                    json_value(&occurrence),
+                    json_value(&candidate.occurrence),
+                    "Go and Rust observations must retain the requested file and UTF-8 span",
+                ));
+            }
+
+            match expectation.classification {
+                ExpectedClassification::Supported => {
+                    if candidate.occurrence.syntax_kind != occurrence.syntax_kind {
+                        self.differences.push(mismatch(
+                            DifferenceCategory::Mapping,
+                            "syntax-kind-mismatch",
+                            Some((fact_index, occurrence.clone())),
+                            "occurrence.syntaxKind",
+                            json_value(&occurrence.syntax_kind),
+                            json_value(&candidate.occurrence.syntax_kind),
+                            "supported observations require the exact portable syntax kind",
+                        ));
+                    }
+                    if candidate.oxc_node_id.is_some() {
+                        self.mapping.mapped += 1;
+                        self.compare_fact(fact_index, facts, candidate);
+                    } else {
+                        self.mapping.unmapped += 1;
+                        self.differences.push(mismatch(
+                            DifferenceCategory::Mapping,
+                            "missing-oxc-node",
+                            Some((fact_index, occurrence.clone())),
+                            "oxcNodeId",
+                            json_value(&"typed OXC NodeId"),
+                            None,
+                            "supported facts must originate from an exact OXC semantic node",
+                        ));
+                    }
+                }
+                ExpectedClassification::Unsupported => {
+                    self.observe_expected_non_supported(
+                        fact_index,
+                        facts,
+                        candidate,
+                        expectation,
+                        NonSupportedObservation {
+                            category: DifferenceCategory::Unsupported,
+                            state_matches: candidate.summary.unsupported > 0,
+                            explanation: "the fixture pins an out-of-category Rust observation",
+                        },
+                    );
+                }
+                ExpectedClassification::Budget => {
+                    self.observe_expected_non_supported(
+                        fact_index,
+                        facts,
+                        candidate,
+                        expectation,
+                        NonSupportedObservation {
+                            category: DifferenceCategory::Budget,
+                            state_matches: candidate.summary.truncated > 0 && self.output.truncated,
+                            explanation: "the fixture pins explicit response-local budget truncation",
+                        },
+                    );
+                }
+                ExpectedClassification::Mapping => {
+                    self.mapping.unmapped += 1;
+                    failed_files.insert(facts.file.clone());
+                    let code = expectation
+                        .code
+                        .as_deref()
+                        .expect("mapping expectations require a code");
+                    let diagnostic_matches =
+                        self.output.diagnostics.iter().any(|diagnostic| {
+                            diagnostic.file == facts.file && diagnostic.code == code
+                        });
+                    if candidate.oxc_node_id.is_none()
+                        && candidate.summary.error > 0
+                        && diagnostic_matches
+                    {
+                        self.differences.push(expected_difference(
+                            DifferenceCategory::Mapping,
+                            code,
+                            Some((fact_index, occurrence.clone())),
+                            "classification",
+                            json_value(&expectation.classification),
+                            json_value(candidate),
+                            "the known recovery-file OXC parser gap is explicit and stable",
+                        ));
+                    } else {
+                        self.differences.push(mismatch(
+                            DifferenceCategory::Mapping,
+                            "mapping-classification-mismatch",
+                            Some((fact_index, occurrence.clone())),
+                            "classification",
+                            json_value(expectation),
+                            json_value(candidate),
+                            "the expected mapping gap changed and its fixture classification must be reviewed",
+                        ));
+                    }
+                }
+            }
+
+            let expectation_matched = self.differences[difference_start..]
+                .iter()
+                .all(|difference| difference.expected);
+            self.selections.push(SelectionEvidence {
+                fact_index,
+                proves: proves[fact_index].clone(),
+                expected_classification: expectation.classification,
+                expected_code: expectation.code.clone(),
+                expectation_matched,
+                go_oracle: GoOracleFactObservation {
+                    occurrence,
+                    complete: facts.complete,
+                    recovered: facts.recovered,
+                    truncated: facts.truncated,
+                    type_view_states: facts.type_view_states.clone(),
+                    actual: self
+                        .snapshot
+                        .graph()
+                        .type_record(facts.actual())
+                        .map_or(serde_json::Value::Null, oracle_record_value),
+                },
+                rust_candidate: candidate.clone(),
+            });
+        }
+        self.mapping.failed_files = failed_files.len();
+    }
+
+    fn observe_expected_non_supported(
+        &mut self,
+        fact_index: usize,
+        facts: &OccurrenceTypeFacts,
+        candidate: &PrimitiveLiteralCandidate,
+        expectation: &SelectionExpectation,
+        observation: NonSupportedObservation<'_>,
+    ) {
+        let occurrence = facts.occurrence();
+        if candidate.oxc_node_id.is_some() {
+            self.mapping.mapped += 1;
+        } else {
+            self.mapping.unmapped += 1;
+        }
+        if observation.state_matches {
+            self.differences.push(expected_difference(
+                observation.category,
+                expectation
+                    .code
+                    .as_deref()
+                    .expect("non-supported expectations require a code"),
+                Some((fact_index, occurrence)),
+                "classification",
+                json_value(&expectation.classification),
+                json_value(candidate),
+                observation.explanation,
+            ));
+        } else {
+            self.differences.push(mismatch(
+                DifferenceCategory::Transport,
+                "classification-state-mismatch",
+                Some((fact_index, occurrence)),
+                "classification",
+                json_value(expectation),
+                json_value(candidate),
+                "the Rust candidate state no longer matches its explicit fixture classification",
+            ));
+        }
+    }
+
+    fn validate_go_expectation(
+        &mut self,
+        fact_index: usize,
+        facts: &OccurrenceTypeFacts,
+        expectation: &GoOracleExpectation,
+    ) {
+        let actual_record = self.snapshot.graph().type_record(facts.actual());
+        let fact_matches = facts.complete == expectation.complete
+            && facts.recovered == expectation.recovered
+            && facts.truncated == expectation.truncated
+            && facts.type_view_states == expectation.type_view_states;
+        let type_matches = actual_record.is_some_and(|record| {
+            oracle_type_matches_expectation(
+                self.snapshot.graph(),
+                record,
+                &expectation.actual,
+                &mut BTreeSet::new(),
+            )
+        });
+        if fact_matches && type_matches {
+            return;
+        }
+        let occurrence = facts.occurrence();
+        self.differences.push(mismatch(
+            DifferenceCategory::Semantic,
+            "go-oracle-expectation-mismatch",
+            Some((fact_index, occurrence)),
+            "goOracle",
+            json_value(expectation),
+            json_value(&serde_json::json!({
+                "complete": facts.complete,
+                "recovered": facts.recovered,
+                "truncated": facts.truncated,
+                "typeViewStates": facts.type_view_states,
+                "actual": actual_record.map(oracle_record_value),
+            })),
+            "the checked Go oracle observation drifted from the fixture's structured expectation",
+        ));
     }
 
     fn compare_fact(
@@ -524,14 +865,14 @@ impl<'a> Comparison<'a> {
             oracle_type_supported(self.snapshot.graph(), record, &mut BTreeSet::new())
         });
         if !actual_supported {
-            self.differences.push(expected_difference(
-                DifferenceCategory::Unsupported,
-                "actual-type-outside-primitive-literal-slice",
+            self.differences.push(mismatch(
+                DifferenceCategory::Semantic,
+                "supported-go-type-outside-primitive-literal-slice",
                 context,
                 "roots[actual]",
                 actual_record.map(oracle_record_value),
                 candidate.roots.first().and_then(json_value),
-                "the fixture intentionally retains an out-of-category selection",
+                "a fixture classified as supported must have an in-category complete Go actual type",
             ));
             return;
         }
@@ -738,18 +1079,14 @@ impl<'a> Comparison<'a> {
         matched
     }
 
-    fn finish(
-        mut self,
-        name: String,
-        independent_scope: bool,
-        repeated_equal: bool,
-    ) -> ConformanceCase {
+    fn finish(mut self, name: String, repeated_equal: bool) -> ConformanceCase {
         sort_differences(&mut self.differences);
         ConformanceCase {
             name,
-            independent_scope,
             facts: self.snapshot.facts().len(),
             repeated_rust_output_equal: repeated_equal,
+            classifications: self.classifications,
+            selections: self.selections,
             go_oracle: GoOracleEvidence {
                 diagnostic_count: self.snapshot.diagnostic_count,
                 budgets: self.snapshot.budgets,
@@ -838,6 +1175,42 @@ fn oracle_type_supported(
     }
 }
 
+fn oracle_type_matches_expectation(
+    graph: &TypeGraph,
+    record: &crate::facts::TypeRecord,
+    expectation: &GoOracleTypeExpectation,
+    visiting: &mut BTreeSet<TypeId>,
+) -> bool {
+    if record.type_kind != expectation.type_kind
+        || record.state != expectation.state
+        || record.complete != expectation.complete
+        || record.truncated != expectation.truncated
+        || record.literal != expectation.literal
+        || expectation
+            .member_count
+            .is_some_and(|count| record.members.len() != count)
+    {
+        return false;
+    }
+    let Some(expected_members) = &expectation.members else {
+        return true;
+    };
+    if expected_members.len() != record.members.len() || !visiting.insert(record.id.clone()) {
+        return false;
+    }
+    let matched = record
+        .members
+        .iter()
+        .zip(expected_members)
+        .all(|(member, expectation)| {
+            graph.type_record(member).is_some_and(|record| {
+                oracle_type_matches_expectation(graph, record, expectation, visiting)
+            })
+        });
+    visiting.remove(&record.id);
+    matched
+}
+
 fn literal_wire_name(kind: LiteralKind) -> &'static str {
     match kind {
         LiteralKind::Boolean => "boolean",
@@ -878,6 +1251,7 @@ fn summarize(cases: &[ConformanceCase]) -> ConformanceSummary {
             + case.candidate_states.error;
         summary.supported_records += case.supported_records;
         summary.matched_supported_records += case.matched_supported_records;
+        summary.classifications.merge(case.classifications);
         for difference in &case.differences {
             *summary
                 .differences_by_category
@@ -885,13 +1259,19 @@ fn summarize(cases: &[ConformanceCase]) -> ConformanceSummary {
                 .or_default() += 1;
             if difference.expected {
                 summary.expected_differences += 1;
-            } else if matches!(
-                difference.category,
-                DifferenceCategory::Semantic
-                    | DifferenceCategory::Transport
-                    | DifferenceCategory::Mapping
-            ) {
-                summary.blocking_differences += 1;
+            } else {
+                *summary
+                    .unexplained_differences_by_category
+                    .entry(category_name(difference.category).to_owned())
+                    .or_default() += 1;
+                if matches!(
+                    difference.category,
+                    DifferenceCategory::Semantic
+                        | DifferenceCategory::Transport
+                        | DifferenceCategory::Mapping
+                ) {
+                    summary.blocking_differences += 1;
+                }
             }
         }
     }
@@ -1006,6 +1386,57 @@ fn read_manifest(case_directory: &Path) -> Result<CorpusManifest, String> {
         .map_err(|error| format!("transport: decode {}: {error}", path.display()))
 }
 
+fn validate_expectations(manifest: &CorpusManifest) -> Result<(), String> {
+    for (index, selection) in manifest.selections.iter().enumerate() {
+        let expectation = selection
+            .conformance
+            .as_ref()
+            .expect("selected cases require every expectation");
+        let requires_code = expectation.classification != ExpectedClassification::Supported;
+        if requires_code
+            != expectation
+                .code
+                .as_deref()
+                .is_some_and(|code| !code.is_empty())
+        {
+            return Err(format!(
+                "transport: case {:?} selections[{index}] must {} an explicit classification code",
+                manifest.name,
+                if requires_code { "provide" } else { "omit" }
+            ));
+        }
+        if expectation.go_oracle.type_view_states.actual != TypeViewState::Available {
+            return Err(format!(
+                "transport: case {:?} selections[{index}] Go actual view must be available",
+                manifest.name
+            ));
+        }
+        validate_type_expectation(&manifest.name, index, &expectation.go_oracle.actual)?;
+    }
+    Ok(())
+}
+
+fn validate_type_expectation(
+    case_name: &str,
+    selection_index: usize,
+    expectation: &GoOracleTypeExpectation,
+) -> Result<(), String> {
+    if let (Some(member_count), Some(members)) = (expectation.member_count, &expectation.members)
+        && member_count != members.len()
+    {
+        return Err(format!(
+            "transport: case {case_name:?} selections[{selection_index}] memberCount {member_count} does not match {} structured members",
+            members.len()
+        ));
+    }
+    if let Some(members) = &expectation.members {
+        for member in members {
+            validate_type_expectation(case_name, selection_index, member)?;
+        }
+    }
+    Ok(())
+}
+
 fn build_request<'a>(
     case_directory: &Path,
     manifest: &'a CorpusManifest,
@@ -1057,6 +1488,30 @@ mod tests {
             supported_compatibility_ppm: 1_000_000,
             ..ConformanceSummary::default()
         };
+        assert!(!threshold_passes(&summary, compatibility_threshold()));
+    }
+
+    #[test]
+    fn expected_mapping_gaps_do_not_hide_or_block_supported_denominator() {
+        let mut summary = ConformanceSummary {
+            supported_records: 15,
+            matched_supported_records: 15,
+            supported_compatibility_ppm: 1_000_000,
+            ..ConformanceSummary::default()
+        };
+        summary
+            .differences_by_category
+            .insert("mapping".to_owned(), 3);
+        summary.classifications = ClassificationCoverage {
+            supported: 10,
+            mapping: 3,
+            ..ClassificationCoverage::default()
+        };
+
+        assert!(threshold_passes(&summary, compatibility_threshold()));
+        summary
+            .unexplained_differences_by_category
+            .insert("mapping".to_owned(), 1);
         assert!(!threshold_passes(&summary, compatibility_threshold()));
     }
 

@@ -1,0 +1,35 @@
+{
+  "name": "primitive-literal-budget",
+  "description": "Explicit primitive/literal response-local budget truncation",
+  "coverage": [
+    "primitive-literal-response-budget"
+  ],
+  "project": "tsconfig.json",
+  "capabilities": [
+    "occurrence.type-views",
+    "types.core-composite"
+  ],
+  "budgets": {
+    "maxTypeNodes": 2,
+    "maxTypeDepth": 16
+  },
+  "selections": [
+    {
+      "file": "src/budget.ts",
+      "text": "budgetUnion",
+      "occurrence": 1,
+      "proves": "both producers expose a bounded literal-union response instead of hiding it",
+      "conformance": {
+        "classification": "budget",
+        "code": "type-budget-exceeded",
+        "goOracle": {
+          "complete": false,
+          "recovered": false,
+          "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "union", "state": "truncated", "complete": false, "truncated": true, "memberCount": 6 }
+        }
+      }
+    }
+  ]
+}

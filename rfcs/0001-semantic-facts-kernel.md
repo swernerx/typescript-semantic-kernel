@@ -279,6 +279,15 @@ identity, structured payloads, unsupported states, and truncation. CI requires
 semantic, transport, or mapping differences. This gate does not change the
 schema-v1 producer, external consumers, or production authority.
 
+Issue #46 expands that gate to 28 explicitly classified facts covering
+declarations, expressions, widening, `as const`, `satisfies`, enum-like values,
+imports, contextual literals, literal unions, null-like values, recovery, and
+budget truncation. Structured Go expectations are checked before differential
+comparison. Expected unsupported, budget, and the three pinned recovery mapping
+cases remain visible outside the 29-record supported denominator; unexplained
+semantic, transport, or mapping differences still block CI, and repeated full
+reports must be byte-identical.
+
 ## Considered alternatives
 
 ### Prune TypeScript 7 immediately

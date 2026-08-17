@@ -114,8 +114,9 @@ fallback behavior remain Go-authoritative.
 8. `./internal/oxc_reference/run-evidence.sh --output <path>` produces stable
    repeated observations and passes ADR-0016's occurrence/attachment gate.
 9. `./internal/oxc_reference/run-conformance.sh --output <path>` emits the
-   deterministic ADR-0019 report and fails on any semantic, transport, or
-   mapping mismatch while retaining named unsupported and budget cases.
+   byte-stable ADR-0019 report and fails on any unexplained semantic, transport,
+   or mapping mismatch while retaining named unsupported, budget, and expected
+   mapping cases outside the supported denominator.
 
 ## Upstream synchronization
 

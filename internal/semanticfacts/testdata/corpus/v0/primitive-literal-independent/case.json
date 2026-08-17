@@ -24,67 +24,171 @@
       "file": "src/primitives.ts",
       "text": "literalUnion",
       "occurrence": 1,
-      "proves": "literal union and response-local member identity"
+      "proves": "literal union and response-local member identity",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false,
+          "recovered": true,
+          "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": {
+            "typeKind": "union",
+            "state": "complete",
+            "complete": true,
+            "truncated": false,
+            "members": [
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "ready" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "number", "value": "42" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "bigint", "value": "42" } },
+              { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "boolean", "value": "true" } },
+              { "typeKind": "null", "state": "complete", "complete": true, "truncated": false },
+              { "typeKind": "undefined", "state": "complete", "complete": true, "truncated": false }
+            ]
+          }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "booleanPrimitive",
       "occurrence": 1,
-      "proves": "boolean primitive"
+      "proves": "boolean primitive",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "boolean", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "stringPrimitive",
       "occurrence": 1,
-      "proves": "string primitive"
+      "proves": "string primitive",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "string", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "numberPrimitive",
       "occurrence": 1,
-      "proves": "number primitive"
+      "proves": "number primitive",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "number", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "bigintPrimitive",
       "occurrence": 1,
-      "proves": "bigint primitive"
+      "proves": "bigint primitive",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "available", "declared": "same-as-actual" },
+          "actual": { "typeKind": "bigint", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "\"context\"",
       "occurrence": 0,
-      "proves": "contextual string literal"
+      "proves": "contextual string literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "string", "value": "context" } }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "7",
       "occurrence": 0,
-      "proves": "contextual number literal"
+      "proves": "contextual number literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "number", "value": "7" } }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "false",
       "occurrence": 0,
-      "proves": "contextual boolean literal"
+      "proves": "contextual boolean literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "boolean", "value": "false" } }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "7n",
       "occurrence": 0,
-      "proves": "contextual bigint literal"
+      "proves": "contextual bigint literal",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "available", "widened": "same-as-actual", "apparent": "available", "declared": "inapplicable" },
+          "actual": { "typeKind": "literal", "state": "complete", "complete": true, "truncated": false, "literal": { "kind": "bigint", "value": "7" } }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "null",
       "occurrence": 1,
-      "proves": "contextual null-like value"
+      "proves": "contextual null-like value",
+      "conformance": {
+        "classification": "supported",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": false,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "inapplicable" },
+          "actual": { "typeKind": "null", "state": "complete", "complete": true, "truncated": false }
+        }
+      }
     },
     {
       "file": "src/primitives.ts",
       "text": "unsupported",
       "occurrence": 1,
-      "proves": "out-of-category type remains explicit"
+      "proves": "out-of-category type remains explicit",
+      "conformance": {
+        "classification": "unsupported",
+        "code": "object-outside-category",
+        "goOracle": {
+          "complete": false, "recovered": true, "truncated": true,
+          "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },
+          "actual": { "typeKind": "object", "state": "truncated", "complete": false, "truncated": true }
+        }
+      }
     }
   ],
   "expectations": {

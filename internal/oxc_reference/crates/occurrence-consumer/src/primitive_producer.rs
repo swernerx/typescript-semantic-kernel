@@ -7,7 +7,7 @@ use std::{
 use oxc_allocator::Allocator;
 use oxc_ast::{
     AstKind,
-    ast::{Expression, TSLiteral, TSType, TSTypeName},
+    ast::{Expression, TSLiteral, TSType, TSTypeName, VariableDeclarationKind},
 };
 use oxc_parser::{ParseOptions, Parser};
 use oxc_semantic::{NodeId, Semantic, SemanticBuilder};
@@ -24,7 +24,7 @@ use crate::{
     facts::{TypeId, TypeView, TypeViewState},
 };
 
-pub const INDEPENDENT_PRIMITIVE_LITERAL_PRODUCER_VERSION: u32 = 1;
+pub const INDEPENDENT_PRIMITIVE_LITERAL_PRODUCER_VERSION: u32 = 2;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PrimitiveLiteralSelection {
@@ -530,19 +530,29 @@ fn infer_declaration(
     resolving: &mut BTreeSet<(u32, u32)>,
 ) -> SemanticShape {
     match kind {
-        AstKind::VariableDeclarator(declarator) => declarator
-            .type_annotation
-            .as_ref()
-            .map(|annotation| infer_ts_type(&annotation.type_annotation, semantic, resolving))
-            .or_else(|| {
-                declarator
-                    .init
-                    .as_ref()
-                    .map(|expression| infer_expression(expression, semantic, resolving))
-            })
-            .unwrap_or_else(|| {
+        AstKind::VariableDeclarator(declarator) => {
+            if let Some(annotation) = &declarator.type_annotation {
+                infer_ts_type(&annotation.type_annotation, semantic, resolving)
+            } else if let Some(expression) = &declarator.init {
+                let shape = infer_expression(expression, semantic, resolving);
+                let declaration_kind = match semantic.nodes().parent_kind(declarator.node_id.get())
+                {
+                    AstKind::VariableDeclaration(declaration) => Some(declaration.kind),
+                    _ => None,
+                };
+                if matches!(
+                    declaration_kind,
+                    Some(VariableDeclarationKind::Let | VariableDeclarationKind::Var)
+                ) && !is_const_assertion(expression)
+                {
+                    widen_literal(shape)
+                } else {
+                    shape
+                }
+            } else {
                 unavailable_span(declarator.span, CandidateReason::UnsupportedExpression)
-            }),
+            }
+        }
         AstKind::TSTypeAliasDeclaration(alias) => {
             let key = (alias.span.start, alias.span.end);
             if !resolving.insert(key) {
@@ -655,6 +665,9 @@ fn infer_expression(
         Expression::ParenthesizedExpression(parenthesized) => {
             infer_expression(&parenthesized.expression, semantic, resolving)
         }
+        Expression::TSAsExpression(assertion) if is_const_type(&assertion.type_annotation) => {
+            infer_expression(&assertion.expression, semantic, resolving)
+        }
         Expression::TSAsExpression(assertion) => {
             infer_ts_type(&assertion.type_annotation, semantic, resolving)
         }
@@ -674,13 +687,45 @@ fn contextual_shape(
     resolving: &mut BTreeSet<(u32, u32)>,
 ) -> Option<SemanticShape> {
     semantic.nodes().ancestor_kinds(node_id).find_map(|kind| {
-        let AstKind::VariableDeclarator(declarator) = kind else {
-            return None;
+        let shape = match kind {
+            AstKind::TSSatisfiesExpression(satisfies) => {
+                infer_ts_type(&satisfies.type_annotation, semantic, resolving)
+            }
+            AstKind::VariableDeclarator(declarator) => {
+                let annotation = declarator.type_annotation.as_ref()?;
+                infer_ts_type(&annotation.type_annotation, semantic, resolving)
+            }
+            _ => return None,
         };
-        let annotation = declarator.type_annotation.as_ref()?;
-        let shape = infer_ts_type(&annotation.type_annotation, semantic, resolving);
         (!matches!(shape, SemanticShape::NullLike(NullLikeKind::Null))).then_some(shape)
     })
+}
+
+fn is_const_assertion(expression: &Expression<'_>) -> bool {
+    matches!(expression, Expression::TSAsExpression(assertion) if is_const_type(&assertion.type_annotation))
+}
+
+fn is_const_type(r#type: &TSType<'_>) -> bool {
+    matches!(
+        r#type,
+        TSType::TSTypeReference(reference)
+            if matches!(
+                &reference.type_name,
+                TSTypeName::IdentifierReference(identifier) if identifier.name == "const"
+            )
+    )
+}
+
+fn widen_literal(shape: SemanticShape) -> SemanticShape {
+    match shape {
+        SemanticShape::Literal(literal, _) => SemanticShape::Primitive(match literal {
+            LiteralKind::Boolean => PrimitiveKind::Boolean,
+            LiteralKind::String => PrimitiveKind::String,
+            LiteralKind::Number => PrimitiveKind::Number,
+            LiteralKind::Bigint => PrimitiveKind::Bigint,
+        }),
+        shape => shape,
+    }
 }
 
 fn apparent_shape(actual: &SemanticShape) -> Option<SemanticShape> {
@@ -1046,6 +1091,52 @@ unsupported;
     }
 
     #[test]
+    fn widening_const_assertions_and_satisfies_context_are_independent() {
+        const MATRIX: &str = r#"
+let widened = "wide";
+const asserted = "narrow" as const;
+const checked = "checked" satisfies string;
+widened;
+asserted;
+"#;
+        let sources = BTreeMap::from([("src/primitives.ts".to_owned(), MATRIX.to_owned())]);
+        let selections = [
+            selection(MATRIX, "widened", 1),
+            selection(MATRIX, "asserted", 1),
+            selection(MATRIX, "\"checked\"", 0),
+        ];
+        let output = produce_primitive_literals_from_sources(
+            &sources,
+            &selections,
+            PrimitiveProducerLimits::default(),
+        );
+
+        assert!(candidate_has_semantic(
+            &output.candidates[0],
+            &CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::String,
+            }
+        ));
+        assert!(candidate_has_semantic(
+            &output.candidates[1],
+            &CandidateSemantic::Literal {
+                literal: LiteralKind::String,
+                value: "narrow".to_owned(),
+            }
+        ));
+        assert_eq!(
+            output.candidates[2].roots[1].state,
+            TypeViewState::Available
+        );
+        assert!(candidate_has_semantic(
+            &output.candidates[2],
+            &CandidateSemantic::Primitive {
+                primitive: PrimitiveKind::String,
+            }
+        ));
+    }
+
+    #[test]
     fn recoverable_oxc_diagnostics_mark_independent_facts_recovered() {
         const RECOVERED_SOURCE: &str = "declare const value: null;\nvalue;\n\
              const duplicate = 1;\nconst duplicate = 2;\n";
@@ -1087,5 +1178,15 @@ unsupported;
                 end: u32::try_from(start + text.len()).unwrap(),
             },
         }
+    }
+
+    fn candidate_has_semantic(
+        candidate: &PrimitiveLiteralCandidate,
+        expected: &CandidateSemantic,
+    ) -> bool {
+        candidate
+            .types
+            .iter()
+            .any(|record| record.semantic.as_ref() == Some(expected))
     }
 }

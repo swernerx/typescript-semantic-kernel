@@ -60,17 +60,21 @@ Run the deterministic Go-versus-Rust shadow conformance gate with:
   --output /tmp/ts7-rust-conformance.json
 ```
 
-The command runs the same corpus through the Go oracle and the version-2 Rust
-primitive/literal candidate. Rust derives its records independently from the
+The command runs every explicitly classified primitive/literal corpus fixture
+through the Go oracle and the version-2 Rust producer using the internal
+version-2 candidate schema. Rust derives its records independently from the
 project source and OXC semantic nodes; the Go graph is supplied only to the
 comparator. Its JSON compares fact identity, exact OXC mapping, all five roots,
 response-local graph identity through a Go-to-Rust ID bijection, structured
-payloads, recovery, unsupported states, and truncation. Every entry is
-classified as `semantic`, `transport`, `mapping`, `unsupported`, or `budget`.
-Unexplained
-semantic, transport, or mapping differences fail the command; named
-unsupported and budget cases remain separately reported. The gate is a shadow
-comparison and does not change the producer or production routing. See
+payloads, recovery, unsupported states, and truncation. Every selected fixture
+contains a structured Go expectation and exactly one Rust classification:
+`supported`, `unsupported`, `budget`, or `mapping`. The three recovery-file
+facts remain individually visible as expected `oxc-parse-error` mapping gaps.
+Unexplained semantic, transport, or mapping differences fail the command;
+expected unsupported, budget, and mapping cases remain separately reported.
+The wrapper executes the complete report twice and requires byte-identical
+files. The gate is a shadow comparison and does not change the producer or
+production routing. See
 [ADR-0019](../../docs/adr/0019-compute-primitive-literals-independently-in-rust.md).
 
 The first test suite applies the Rust implementation of the portable contract
