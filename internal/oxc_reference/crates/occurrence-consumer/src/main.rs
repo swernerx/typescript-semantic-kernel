@@ -9,6 +9,7 @@ use oxc_occurrence_consumer::{
     fixture::load_fixtures,
     inspector::{InspectionReport, InspectorLimits},
     oxc::OxcConsumer,
+    primitive_producer::{PrimitiveShadowRequest, produce_primitive_literals},
 };
 use serde::Serialize;
 
@@ -79,10 +80,44 @@ fn main() -> Result<(), String> {
         {
             print_rollout(tsfacts, corpus, revision, Some(output))
         }
+        [command, project_root] if command == "primitive-shadow-worker" => {
+            run_primitive_shadow_worker(project_root)
+        }
         _ => Err(
-            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>] | conformance <tsfacts-binary> <corpus-root> [--output <path>] | rollout <tsfacts-binary> <corpus-root> <repository-revision> [--output <path>]".to_owned(),
+            "usage: oxc-occurrence-map fixtures | inspect <snapshot.jsonl> <source> [logical-file] | evidence <tsfacts-binary> <corpus-root> [--output <path>] | conformance <tsfacts-binary> <corpus-root> [--output <path>] | rollout <tsfacts-binary> <corpus-root> <repository-revision> [--output <path>] | primitive-shadow-worker <project-root>".to_owned(),
         ),
     }
+}
+
+fn run_primitive_shadow_worker(project_root: &str) -> Result<(), String> {
+    let request: PrimitiveShadowRequest = serde_json::from_reader(std::io::stdin().lock())
+        .map_err(|error| format!("decode internal primitive shadow request: {error}"))?;
+    if request.schema_version != 1 {
+        return Err(format!(
+            "unsupported internal primitive shadow schema version {}",
+            request.schema_version
+        ));
+    }
+    let project_root = std::path::Path::new(project_root);
+    let project = project_root.join(&request.project);
+    if !project.is_file() {
+        return Err(format!(
+            "internal primitive shadow project does not exist: {}",
+            project.display()
+        ));
+    }
+    if request.budgets.max_type_nodes
+        != u32::try_from(request.limits.max_type_nodes).unwrap_or(u32::MAX)
+    {
+        return Err("internal primitive shadow node budgets do not match".to_owned());
+    }
+    let output = produce_primitive_literals(project_root, &request.selections, request.limits)?;
+    println!(
+        "{}",
+        serde_json::to_string(&output)
+            .map_err(|error| format!("encode internal primitive shadow response: {error}"))?
+    );
+    Ok(())
 }
 
 fn print_rollout(
@@ -113,7 +148,7 @@ fn print_rollout(
     if report.passes {
         Ok(())
     } else {
-        Err("rollout gate failed: conformance must pass and repeated stable reports must be byte-equal".to_owned())
+        Err("rollout gate failed: conformance, repeated determinism, failure paths, and comparable production-boundary measurements must pass".to_owned())
     }
 }
 

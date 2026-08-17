@@ -91,12 +91,17 @@ Run the controlled rollout evidence path with release binaries:
 This command executes two complete Go/Rust dual-runs over the same ordered
 manifest requests and requires their embedded conformance reports to be
 byte-identical. The report pins the repository and TypeScript revisions,
-projects, capabilities, budgets, and selection counts. It also records two
-host-dependent runtime/output-size samples, release artifact sizes, and the
-Rust controller's explicitly scoped resident-memory measurement. Those
-measurements characterize the one-shot Go versus in-process Rust harness; they
-are not compatibility thresholds or a performance claim. Go remains the
-serving authority and fallback, and Rust stays shadow-only. See
+projects, capabilities, budgets, and selection counts. For each measured case,
+the controller invokes the real Go serving command and the internal Rust
+shadow worker as equivalent one-shot release children. Only Go stdout is
+served. A tested state machine observes Rust failure, preserves the Go
+response, rolls the shadow back until explicit reset, and never masks a Go
+failure. Two samples record wall time and raw output bytes at this boundary,
+release artifact sizes, and per-producer peak child RSS from Unix `wait4`.
+Different internal output schemas and sequential one-shot execution remain
+explicit characterization caveats, not compatibility thresholds or a
+performance claim. Go remains the serving authority and fallback, and Rust
+stays shadow-only. See
 [ADR-0020](../../docs/adr/0020-keep-primitive-literals-shadow-only-after-dual-run.md).
 
 The first test suite applies the Rust implementation of the portable contract
@@ -144,11 +149,11 @@ Occurrence identity and attachment plumbing is the first approved mechanical
 port category. Primitive/literal construction is now independently implemented
 for the narrow, tagged conformance corpus and satisfies the shadow threshold in
 ADR-0019. The controlled dual-run in ADR-0020 resolves the four unsupported
-and three recovery observations as stable, owned, actionable limitations. The
-serving-integration, measurement-boundary, and memory blockers remain. This
-does not transfer semantic authority: the implementation is not wired into
-production, Go remains the fallback, and broader TypeScript semantics remain
-Go-authoritative.
+and three recovery observations as stable, owned, actionable limitations.
+Issue #53 additionally exercises production-equivalent child-process shadow,
+fallback, rollback, and comparable child RSS. This evidence is ready for a
+later authority decision but does not make one: Go remains the serving path and
+fallback, and broader TypeScript semantics remain Go-authoritative.
 
 Adding a projection does not transfer semantic authority. New parser-boundary
 normalizations require a shared fixture and the versioned portable contract.

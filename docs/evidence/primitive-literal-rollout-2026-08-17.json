@@ -1,5 +1,5 @@
 {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "evidenceKind": "primitive-literal-controlled-go-rust-dual-run",
     "command": "./internal/oxc_reference/run-rollout.sh --output <path>",
     "environment": {
@@ -17,6 +17,25 @@
         "ts7ProducerProtocolChanged": false,
         "externalConsumerBehaviorChanged": false
     },
+    "boundary": {
+        "name": "one-shot-child-process-shadow",
+        "controller": "release rollout controller",
+        "goServingProcess": "cmd/tsfacts JSON Lines serving child",
+        "rustShadowProcess": "oxc-occurrence-map primitive-shadow-worker child",
+        "requestScope": "same ordered manifest selections, capabilities, budgets, and project per classified corpus case",
+        "servedOutput": "Go stdout only; Rust stdout is observation-only",
+        "sameOneShotChildProcessBoundary": true,
+        "releaseArtifacts": true
+    },
+    "failurePaths": {
+        "goResponseSurvivesShadowFailure": true,
+        "shadowFailureIsObserved": true,
+        "shadowFailureDetailRetained": true,
+        "rollbackDisablesShadow": true,
+        "rolledBackRequestSkipsShadow": true,
+        "explicitResetReenablesShadow": true,
+        "goFailureIsNotMasked": true
+    },
     "determinism": {
         "completeRuns": 2,
         "conformanceReportsByteEqual": true,
@@ -28,7 +47,7 @@
         "candidate": "independent-primitive-literal-v2",
         "shadowOnly": true,
         "execution": {
-            "repositoryRevision": "20d726c587bc612b5be8311530a553f70b0ed79b",
+            "repositoryRevision": "5d79fe8dcc7fbe740fd0391ee3b7f1bb45e90409",
             "typescriptVersion": "7.1.0-dev",
             "typescriptRevision": "1bcfa18d79a3be41772223d5c05dfe4480e614ff",
             "requestSchemaVersion": 1,
@@ -3975,40 +3994,48 @@
         "passes": true
     },
     "measurements": {
-        "scope": "one-shot Go process versus in-process Rust producer over identical ordered requests; characterization only",
+        "scope": "sequential one-shot release child processes over identical ordered per-case requests; characterization, not a throughput benchmark",
+        "outputScope": "raw successful child stdout bytes before decoding; Go JSON Lines and the internal Rust shadow payload have different schemas",
+        "memoryScope": "per-child peak resident set from wait4 rusage, aggregated as the maximum across case processes for each producer",
         "samples": [
             {
                 "ordinal": 1,
                 "cases": 4,
-                "goOracleNanoseconds": 700402249,
-                "rustProducerNanoseconds": 1367000,
-                "rustDeterminismCheckNanoseconds": 236041,
-                "totalNanoseconds": 704086084,
-                "goSnapshotBytes": 36671,
-                "rustCandidateBytes": 22615
+                "goServingWallNanoseconds": 297564333,
+                "rustShadowWallNanoseconds": 38245417,
+                "goServedOutputBytes": 36671,
+                "rustShadowOutputBytes": 22619,
+                "goPeakResidentBytes": 44023808,
+                "rustPeakResidentBytes": 3162112,
+                "residentMeasurement": "wait4-ru-maxrss-peak",
+                "memoryComparable": true,
+                "servedGoResponsesUnchanged": true,
+                "shadowObservationFailures": 0
             },
             {
                 "ordinal": 2,
                 "cases": 4,
-                "goOracleNanoseconds": 127294084,
-                "rustProducerNanoseconds": 789167,
-                "rustDeterminismCheckNanoseconds": 237917,
-                "totalNanoseconds": 129383625,
-                "goSnapshotBytes": 36671,
-                "rustCandidateBytes": 22615
+                "goServingWallNanoseconds": 248149001,
+                "rustShadowWallNanoseconds": 29793292,
+                "goServedOutputBytes": 36671,
+                "rustShadowOutputBytes": 22619,
+                "goPeakResidentBytes": 43384832,
+                "rustPeakResidentBytes": 3162112,
+                "residentMeasurement": "wait4-ru-maxrss-peak",
+                "memoryComparable": true,
+                "servedGoResponsesUnchanged": true,
+                "shadowObservationFailures": 0
             }
         ],
         "artifacts": {
             "goExecutableBytes": 25670354,
-            "rustExecutableBytes": 3345040,
-            "peakOrCurrentControllerResidentBytes": 4964352,
-            "residentMeasurement": "macos-getrusage-peak",
-            "memoryScope": "Rust rollout controller including decoded Go snapshots; excludes child Go process RSS"
+            "rustExecutableBytes": 3498416,
+            "scope": "on-disk bytes of the two release executables invoked at the selected child-process boundary"
         }
     },
     "readiness": {
-        "readyForLaterAuthorityDecision": false,
-        "status": "not-ready",
+        "readyForLaterAuthorityDecision": true,
+        "status": "evidence-ready-authority-unchanged",
         "resolvedRolloutLimitations": [
             {
                 "case": "primitive-literal-conformance",
@@ -4130,11 +4157,13 @@
                 "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this recursive-budget selection."
             }
         ],
-        "blockers": [
-            "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised",
-            "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected",
-            "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
-        ]
+        "remainingCaveats": [
+            "the four unsupported primitive/literal selections and three recovery-file mapping gaps remain explicitly fixture-classified limitations",
+            "raw producer-output byte counts characterize different internal payload schemas and are not protocol-parity evidence",
+            "sequential one-shot process samples characterize the selected boundary; they are not daemon throughput or latency benchmarks",
+            "peak resident memory uses Unix wait4 rusage and requires a separately justified method on non-Unix platforms"
+        ],
+        "blockers": []
     },
     "passes": true
 }

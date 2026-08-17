@@ -12,7 +12,7 @@ use oxc_ast::{
 use oxc_parser::{ParseOptions, Parser};
 use oxc_semantic::{NodeId, Semantic, SemanticBuilder};
 use oxc_span::{GetSpan, SourceType};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     candidate::{
@@ -26,16 +26,35 @@ use crate::{
 
 pub const INDEPENDENT_PRIMITIVE_LITERAL_PRODUCER_VERSION: u32 = 2;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrimitiveLiteralSelection {
     pub file: String,
     pub span: Span,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PrimitiveProducerLimits {
     pub max_type_nodes: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrimitiveShadowRequest {
+    pub schema_version: u32,
+    pub project: String,
+    pub required_capabilities: Vec<String>,
+    pub budgets: PrimitiveShadowBudgets,
+    pub selections: Vec<PrimitiveLiteralSelection>,
+    pub limits: PrimitiveProducerLimits,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrimitiveShadowBudgets {
+    pub max_type_nodes: u32,
+    pub max_type_depth: u32,
 }
 
 impl Default for PrimitiveProducerLimits {
