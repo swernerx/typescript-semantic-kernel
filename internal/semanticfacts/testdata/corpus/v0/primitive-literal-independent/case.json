@@ -183,6 +183,11 @@
       "conformance": {
         "classification": "unsupported",
         "code": "object-outside-category",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "object-category-rollout",
+          "action": "Keep object types outside this primitive/literal producer and cover them in a separately gated object-category rollout."
+        },
         "goOracle": {
           "complete": false, "recovered": true, "truncated": true,
           "typeViewStates": { "actual": "available", "contextual": "unavailable", "widened": "same-as-actual", "apparent": "same-as-actual", "declared": "same-as-actual" },

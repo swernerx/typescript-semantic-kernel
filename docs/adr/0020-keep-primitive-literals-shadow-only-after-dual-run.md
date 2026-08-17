@@ -36,6 +36,16 @@ completeness, recovery, truncation, unsupported states, mapping, and classified
 differences. Unexplained semantic, transport, or mapping differences fail the
 command.
 
+Issue #52 resolves the seven named rollout observations without broadening the
+producer category. Conformance schema v5 keeps every selected fact in a second,
+CI-enforced accounting denominator, which must remain exactly 100%. The
+supported-record compatibility metric therefore cannot hide unsupported,
+budget, or mapping selections. Each of the four unsupported selections and
+three recovery-file mapping gaps is a stable regression fixture with a
+machine-readable owner and concrete action required for reclassification. A
+changed code, state, diagnostic, or mapping outcome is unexplained and blocks
+the gate.
+
 Runtime and output sizes are retained as two ordered measurement samples.
 Artifact sizes and the controller's peak or current resident memory are
 recorded with their measurement method and scope. These measurements are
@@ -49,11 +59,23 @@ Rust remains shadow-only. Go remains both the serving semantic authority and
 the production fallback. There is no authority switch, TS7 producer protocol
 change, external consumer behavior change, or Palamedes change.
 
-## Remaining blockers
+## Resolved rollout observations
 
-- Four explicitly classified selections remain outside the supported Rust
-  slice.
-- Three recovery selections retain the expected OXC parser/mapping gap.
+- The local enum literal remains owned by `rust-primitive-literal-producer`
+  until local enum declaration and member-value resolution is implemented.
+- The value and type import selections remain owned by
+  `rust-project-resolution` until project-aware cross-file resolution exists.
+- The object selection remains owned by `object-category-rollout`; object
+  semantics are intentionally not folded into the primitive/literal producer.
+- The three recovery selections remain owned by `oxc-occurrence-mapping` until
+  OXC parses or recovers the file and supplies each exact `NodeId` mapping.
+
+These are resolved, explicit limitations rather than authority-readiness
+blockers or hidden exclusions. Their fixture contracts remain CI-blocking when
+the observed behavior changes.
+
+## Remaining authority blockers
+
 - Rust is not integrated into the serving path, so production fallback,
   rollback, and shadow observation at that boundary have not been exercised.
 - Runtime and output-size samples do not yet use one production-equivalent
@@ -82,3 +104,4 @@ that proposal.
 - [ADR-0019](0019-compute-primitive-literals-independently-in-rust.md)
 - [Checked rollout evidence](../evidence/primitive-literal-rollout-2026-08-17.json)
 - [Issue #47](https://github.com/swernerx/typescript-semantic-kernel/issues/47)
+- [Issue #52](https://github.com/swernerx/typescript-semantic-kernel/issues/52)

@@ -28,6 +28,11 @@
       "conformance": {
         "classification": "mapping",
         "code": "oxc-parse-error",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "oxc-occurrence-mapping",
+          "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this type-error selection."
+        },
         "goOracle": {
           "complete": false,
           "recovered": true,
@@ -45,6 +50,11 @@
       "conformance": {
         "classification": "mapping",
         "code": "oxc-parse-error",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "oxc-occurrence-mapping",
+          "action": "Reclassify only when OXC recovers the malformed initializer and produces an exact NodeId mapping for this syntax-error selection."
+        },
         "goOracle": {
           "complete": false,
           "recovered": true,
@@ -62,6 +72,11 @@
       "conformance": {
         "classification": "mapping",
         "code": "oxc-parse-error",
+        "limitationResolution": {
+          "stability": "stable",
+          "owner": "oxc-occurrence-mapping",
+          "action": "Reclassify only when OXC parses the recovery file and produces an exact NodeId mapping for this recursive-budget selection."
+        },
         "goOracle": {
           "complete": false,
           "recovered": true,

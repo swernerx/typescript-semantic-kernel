@@ -27,8 +27,8 @@ use crate::{
     },
 };
 
-pub const CONFORMANCE_SCHEMA_VERSION: u32 = 4;
-pub const ROLLOUT_SCHEMA_VERSION: u32 = 1;
+pub const CONFORMANCE_SCHEMA_VERSION: u32 = 5;
+pub const ROLLOUT_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -139,7 +139,21 @@ pub struct RolloutArtifacts {
 pub struct AuthorityReadiness {
     pub ready_for_later_authority_decision: bool,
     pub status: &'static str,
+    pub resolved_rollout_limitations: Vec<ResolvedRolloutLimitation>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedRolloutLimitation {
+    pub case: String,
+    pub fact_index: usize,
+    pub occurrence: Occurrence,
+    pub classification: ExpectedClassification,
+    pub code: String,
+    pub stability: LimitationStability,
+    pub owner: String,
+    pub action: String,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
@@ -156,6 +170,7 @@ pub struct CorpusCoverage {
 pub struct CompatibilityThreshold {
     pub minimum_supported_records: usize,
     pub required_supported_compatibility_ppm: u64,
+    pub required_selection_accounting_ppm: u64,
     pub max_unexplained_semantic_differences: usize,
     pub max_unexplained_transport_differences: usize,
     pub max_unexplained_mapping_differences: usize,
@@ -227,6 +242,8 @@ pub struct SelectionEvidence {
     pub expected_classification: ExpectedClassification,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expected_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limitation_resolution: Option<LimitationResolution>,
     pub expectation_matched: bool,
     pub go_oracle: GoOracleFactObservation,
     pub rust_candidate: PrimitiveLiteralCandidate,
@@ -287,6 +304,8 @@ pub struct MappingCoverage {
 pub struct ConformanceSummary {
     pub cases: usize,
     pub facts: usize,
+    pub accounted_selections: usize,
+    pub selection_accounting_ppm: u64,
     pub candidate_records: usize,
     pub supported_records: usize,
     pub matched_supported_records: usize,
@@ -303,6 +322,8 @@ impl Default for ConformanceSummary {
         Self {
             cases: 0,
             facts: 0,
+            accounted_selections: 0,
+            selection_accounting_ppm: 0,
             candidate_records: 0,
             supported_records: 0,
             matched_supported_records: 0,
@@ -400,7 +421,23 @@ struct SelectionExpectation {
     classification: ExpectedClassification,
     #[serde(default)]
     code: Option<String>,
+    #[serde(default)]
+    limitation_resolution: Option<LimitationResolution>,
     go_oracle: GoOracleExpectation,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LimitationResolution {
+    pub stability: LimitationStability,
+    pub owner: String,
+    pub action: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LimitationStability {
+    Stable,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -489,7 +526,7 @@ pub fn run_rollout(
         .map_err(|error| format!("transport: serialize repeated conformance report: {error}"))?;
     let reports_equal = first_bytes == repeated_bytes;
     let conformance_passes = first.report.passes && repeated.report.passes;
-    let readiness = authority_readiness(&first.report.summary);
+    let readiness = authority_readiness(&first.report.cases);
     let (resident_bytes, resident_measurement) = resident_memory();
     let rust_executable_bytes = std::env::current_exe()
         .ok()
@@ -691,6 +728,7 @@ fn compatibility_threshold() -> CompatibilityThreshold {
     CompatibilityThreshold {
         minimum_supported_records: 15,
         required_supported_compatibility_ppm: 1_000_000,
+        required_selection_accounting_ppm: 1_000_000,
         max_unexplained_semantic_differences: 0,
         max_unexplained_transport_differences: 0,
         max_unexplained_mapping_differences: 0,
@@ -701,6 +739,7 @@ fn compatibility_threshold() -> CompatibilityThreshold {
 fn threshold_passes(summary: &ConformanceSummary, threshold: CompatibilityThreshold) -> bool {
     summary.supported_records >= threshold.minimum_supported_records
         && summary.supported_compatibility_ppm >= threshold.required_supported_compatibility_ppm
+        && summary.selection_accounting_ppm == threshold.required_selection_accounting_ppm
         && difference_count(summary, "semantic") <= threshold.max_unexplained_semantic_differences
         && difference_count(summary, "transport") <= threshold.max_unexplained_transport_differences
         && difference_count(summary, "mapping") <= threshold.max_unexplained_mapping_differences
@@ -732,35 +771,37 @@ fn compiler_identity(cases: &[ConformanceCase]) -> Result<(String, String), Stri
     Ok((version, revision))
 }
 
-fn authority_readiness(summary: &ConformanceSummary) -> AuthorityReadiness {
-    let mut blockers = Vec::new();
-    if summary.classifications.unsupported > 0 {
-        blockers.push(format!(
-            "{} explicitly classified primitive/literal selections remain unsupported",
-            summary.classifications.unsupported
-        ));
-    }
-    if summary.classifications.mapping > 0 {
-        blockers.push(format!(
-            "{} recovery selections retain expected OXC mapping gaps",
-            summary.classifications.mapping
-        ));
-    }
-    blockers.push(
+fn authority_readiness(cases: &[ConformanceCase]) -> AuthorityReadiness {
+    let resolved_rollout_limitations = cases
+        .iter()
+        .flat_map(|case| {
+            case.selections.iter().filter_map(|selection| {
+                let resolution = selection.limitation_resolution.as_ref()?;
+                Some(ResolvedRolloutLimitation {
+                    case: case.name.clone(),
+                    fact_index: selection.fact_index,
+                    occurrence: selection.go_oracle.occurrence.clone(),
+                    classification: selection.expected_classification,
+                    code: selection.expected_code.clone().unwrap_or_default(),
+                    stability: resolution.stability,
+                    owner: resolution.owner.clone(),
+                    action: resolution.action.clone(),
+                })
+            })
+        })
+        .collect();
+    let blockers = vec![
         "the Rust producer is not integrated into the serving path, so production fallback and rollback have not been exercised"
             .to_owned(),
-    );
-    blockers.push(
         "runtime and output measurements compare a one-shot Go process with an in-process Rust shadow path; a production-equivalent boundary is not selected"
             .to_owned(),
-    );
-    blockers.push(
         "controller RSS excludes the child Go process, so per-producer peak-memory parity is not established"
             .to_owned(),
-    );
+    ];
     AuthorityReadiness {
         ready_for_later_authority_decision: false,
         status: "not-ready",
+        resolved_rollout_limitations,
         blockers,
     }
 }
@@ -1043,6 +1084,7 @@ impl<'a> Comparison<'a> {
                 proves: proves[fact_index].clone(),
                 expected_classification: expectation.classification,
                 expected_code: expectation.code.clone(),
+                limitation_resolution: expectation.limitation_resolution.clone(),
                 expectation_matched,
                 go_oracle: GoOracleFactObservation {
                     occurrence,
@@ -1553,6 +1595,10 @@ fn summarize(cases: &[ConformanceCase]) -> ConformanceSummary {
     };
     for case in cases {
         summary.facts += case.facts;
+        summary.accounted_selections += case.classifications.supported
+            + case.classifications.unsupported
+            + case.classifications.budget
+            + case.classifications.mapping;
         summary.candidate_records += case.candidate_states.complete
             + case.candidate_states.truncated
             + case.candidate_states.unsupported
@@ -1585,6 +1631,7 @@ fn summarize(cases: &[ConformanceCase]) -> ConformanceSummary {
     }
     summary.supported_compatibility_ppm =
         ratio_ppm(summary.matched_supported_records, summary.supported_records);
+    summary.selection_accounting_ppm = ratio_ppm(summary.accounted_selections, summary.facts);
     summary
 }
 
@@ -1727,6 +1774,33 @@ fn validate_expectations(manifest: &CorpusManifest) -> Result<(), String> {
                 if requires_code { "provide" } else { "omit" }
             ));
         }
+        let requires_limitation = matches!(
+            expectation.classification,
+            ExpectedClassification::Unsupported | ExpectedClassification::Mapping
+        );
+        if requires_limitation != expectation.limitation_resolution.is_some() {
+            return Err(format!(
+                "transport: case {:?} selections[{index}] must {} a stable limitation resolution",
+                manifest.name,
+                if requires_limitation {
+                    "provide"
+                } else {
+                    "omit"
+                }
+            ));
+        }
+        if expectation
+            .limitation_resolution
+            .as_ref()
+            .is_some_and(|resolution| {
+                resolution.owner.trim().is_empty() || resolution.action.trim().is_empty()
+            })
+        {
+            return Err(format!(
+                "transport: case {:?} selections[{index}] limitation owner and action must be non-empty",
+                manifest.name
+            ));
+        }
         if expectation.go_oracle.type_view_states.actual != TypeViewState::Available {
             return Err(format!(
                 "transport: case {:?} selections[{index}] Go actual view must be available",
@@ -1814,11 +1888,13 @@ mod tests {
     }
 
     #[test]
-    fn expected_mapping_gaps_do_not_hide_or_block_supported_denominator() {
+    fn expected_mapping_gaps_are_accounted_without_blocking_supported_records() {
         let mut summary = ConformanceSummary {
             supported_records: 15,
             matched_supported_records: 15,
             supported_compatibility_ppm: 1_000_000,
+            accounted_selections: 13,
+            selection_accounting_ppm: 1_000_000,
             ..ConformanceSummary::default()
         };
         summary
@@ -1834,6 +1910,11 @@ mod tests {
         summary
             .unexplained_differences_by_category
             .insert("mapping".to_owned(), 1);
+        assert!(!threshold_passes(&summary, compatibility_threshold()));
+        summary
+            .unexplained_differences_by_category
+            .insert("mapping".to_owned(), 0);
+        summary.selection_accounting_ppm = 999_999;
         assert!(!threshold_passes(&summary, compatibility_threshold()));
     }
 
@@ -1863,24 +1944,16 @@ mod tests {
                 budget: 1,
                 mapping: 3,
             },
+            accounted_selections: 28,
+            selection_accounting_ppm: 1_000_000,
             ..ConformanceSummary::default()
         };
 
         assert!(threshold_passes(&summary, compatibility_threshold()));
-        let readiness = authority_readiness(&summary);
+        let readiness = authority_readiness(&[]);
         assert!(!readiness.ready_for_later_authority_decision);
         assert_eq!(readiness.status, "not-ready");
-        assert!(
-            readiness
-                .blockers
-                .iter()
-                .any(|blocker| blocker.starts_with("4 explicitly classified"))
-        );
-        assert!(
-            readiness
-                .blockers
-                .iter()
-                .any(|blocker| blocker.starts_with("3 recovery selections"))
-        );
+        assert!(readiness.resolved_rollout_limitations.is_empty());
+        assert_eq!(readiness.blockers.len(), 3);
     }
 }
